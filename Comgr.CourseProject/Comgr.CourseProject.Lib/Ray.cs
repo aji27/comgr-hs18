@@ -9,27 +9,26 @@ namespace Comgr.CourseProject.Lib
 {
     public class Ray
     {
-        Vector3 _eyeVector; // Startpunkt
-
+        Vector3 _startVec;
         float _lambda;
-        Vector3 _directionVector; // Richtung
+        Vector3 _directionVec;
 
-        public Ray(Vector3 eye, Vector3 direction)
-            : this(eye, 1, direction)
+        public Ray(Vector3 startVec, Vector3 directionVec)
+            : this(startVec, 1, directionVec)
         {
         }
 
-        public Ray(Vector3 eye, float lambda, Vector3 direction)
+        public Ray(Vector3 startVec, float lambda, Vector3 directionVec)
         {
-            _eyeVector = eye;
+            _startVec = startVec;
             _lambda = lambda;
-            _directionVector = direction;
+            _directionVec = directionVec;
         }
 
-        public Vector3 Eye => _eyeVector;
+        public Vector3 StartVec => _startVec;
 
         public float Lambda => _lambda;
 
-        public Vector3 Direction => _directionVector;
+        public Vector3 DirectionVec => _directionVec;
     }
 }

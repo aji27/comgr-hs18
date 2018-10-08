@@ -77,40 +77,75 @@ namespace Comgr.CourseProject.Lib
 
             return bitmap.GetImage();
         }
-
+                
         public Color GetColor(float x, float y)
         {
             var pixel = new Vector2(x, y);
             var ray = CreateEyeRay(pixel);
+            var rgb = CalcColor(ray);
+
+            return Conversions.FromRGB(rgb, gammaCorrection: false);
+        }
+
+        private Vector3 CalcColor(Ray ray, int reflectionLimit = 1)
+        {
+            var rgb = Vector3.Zero;
+
             var hitPoint = FindClosestHitPoint(ray);
 
             if (hitPoint != null)
             {
-                var rgb = Vector3.Zero;
-                
+                var walls = new[] { "a", "b", "c", "d", "e" };
+                var isWall = walls.Contains(hitPoint.Sphere.Name);
+
+                var material = Conversions.FromColor(hitPoint.Sphere.Color);
+
+                var rayVecNorm = Vector3.Normalize(hitPoint.Ray.DirectionVec);
+                var rayVec = (hitPoint.Ray.Lambda * rayVecNorm) * 0.9999f /* nudging? */;
+                var hitPointVec = hitPoint.Ray.StartVec + rayVec;
+                var nVecNorm = Vector3.Normalize(hitPointVec - hitPoint.Sphere.Center);
+
+                // Reflection
+                if (!isWall /* ignore walls */
+                    && reflectionLimit > 0)
+                {
+                    var reflectionMaterial = Conversions.FromColor(Colors.White);
+
+                    var refVecNorm = Vector3.Normalize(rayVecNorm - 2 * Vector3.Dot(nVecNorm, rayVecNorm) * nVecNorm);
+                    var refVec2 = refVecNorm + (Vector3.One - refVecNorm) * (float)Math.Pow((1 - Vector3.Dot(nVecNorm, refVecNorm)), 5);
+                    var reflectionRay = new Ray(hitPointVec, refVec2);
+                    var reflectionColor = CalcColor(reflectionRay, --reflectionLimit);
+                    var reflection = Vector3.Multiply(reflectionColor, reflectionMaterial) * 0.25f;
+                    rgb += reflection;
+                }
+
                 foreach (var lightSource in LightSources)
                 {
-                    var rayVecNorm = Vector3.Normalize(hitPoint.Ray.Direction);
-                    var rayVec = (hitPoint.Ray.Lambda * rayVecNorm);
-                    var hitPointVec = hitPoint.Ray.Eye + rayVec;
                     var lVec = lightSource.Center - hitPointVec;
                     var lVecNorm = Vector3.Normalize(lVec);
-                                        
-                    var nVecNorm = Vector3.Normalize(hitPointVec - hitPoint.Sphere.Center);
-                    var cos_theta = Vector3.Dot(nVecNorm, lVecNorm);
 
-                    if (cos_theta >= 0)
+                    var light_cos = Vector3.Dot(nVecNorm, lVecNorm);
+
+                    if (light_cos >= 0)
                     {
                         var light = Conversions.FromColor(lightSource.Color);
-                        var material = Conversions.FromColor(hitPoint.Sphere.Color);
-                        var diffuse = Vector3.Multiply(light, material) * cos_theta;
+
+                        // Shadows 
+                        if (HasObjectInFrontOfLightSource(hitPointVec, lightSource))
+                        {
+                            // Question: What is meant by "contribute nothing if it is occluded"?
+                            //light = Conversions.FromColor(Color.FromRgb(32, 32, 32));
+                            light = Conversions.FromColor(Colors.Gray);
+                        }
+
+                        // Diffuse "Lambert" 
+                        var diffuse = Vector3.Multiply(light, material) * light_cos;
                         rgb += diffuse;
 
-                        var walls = new[] { "a", "b", "c", "d", "e" };
-                        var isWall = walls.Contains(hitPoint.Sphere.Name);
-
+                        // Ignore walls
                         if (!isWall)
                         {
+                            // Specular "Phong"
                             var k = 10;
                             var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
                             var rVec = lVec - (2 * sVec);
@@ -118,15 +153,10 @@ namespace Comgr.CourseProject.Lib
                             rgb += specular;
                         }
                     }
-                }
-
-                var color = Conversions.FromRGB(rgb, gammaCorrection: false);
-                color.Clamp();
-
-                return color;
+                }                
             }
 
-            return Colors.Transparent;
+            return rgb;
         }
 
         private Ray CreateEyeRay(Vector2 pixel)
@@ -152,11 +182,34 @@ namespace Comgr.CourseProject.Lib
             return hitPoints.OrderBy(h => h.Ray.Lambda).FirstOrDefault();
         }
 
+        private bool HasObjectInFrontOfLightSource(Vector3 hitPointVec, LightSource lightSource)
+        {
+            var lVec = lightSource.Center - hitPointVec;
+            var ray = new Ray(hitPointVec, lVec);
+            var length = Vector3.DistanceSquared(ray.StartVec, lVec);
+
+            foreach (var sphere in Spheres)
+            {
+                var hitPoint = FindHitpoint(ray, sphere);
+
+                if (hitPoint != null)
+                {
+                    var rayVec = hitPoint.Ray.Lambda * hitPoint.Ray.DirectionVec;
+                    var scale = Vector3.DistanceSquared(hitPoint.Ray.StartVec, rayVec) / length;
+
+                    if (scale <= 1)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
         private HitPoint FindHitpoint(Ray ray, Sphere sphere)
         {
-            var ceVec = ray.Eye - sphere.Center;
+            var ceVec = ray.StartVec - sphere.Center;
 
-            var b = 2 * Vector3.Dot(ceVec, Vector3.Normalize(ray.Direction));
+            var b = 2 * Vector3.Dot(ceVec, Vector3.Normalize(ray.DirectionVec));
             var c = Vector3.Dot(ceVec, ceVec) - (sphere.Radius * sphere.Radius);
 
             var b_squared = b * b;
@@ -172,7 +225,7 @@ namespace Comgr.CourseProject.Lib
                 var lambda = (float)Math.Min(Math.Max(lambda1, 0), Math.Max(lambda2, 0));
 
                 if (lambda > 0)
-                    return new HitPoint(new Ray(ray.Eye, lambda, Vector3.Normalize(ray.Direction)), sphere);
+                    return new HitPoint(new Ray(ray.StartVec, lambda, Vector3.Normalize(ray.DirectionVec)), sphere);
             }
 
             return null;

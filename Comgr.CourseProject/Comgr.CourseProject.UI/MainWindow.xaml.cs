@@ -53,8 +53,6 @@ namespace Comgr.CourseProject.UI
         {
             var eye = new Vector3(0, 0, -4);
             var lookAt = new Vector3(0, 0, 6);
-
-            // Question: Why do I have to take half of it to make it somehow look right?
             var fieldOfView = 36f;
 
             var scene = new Scene(eye, lookAt, fieldOfView);
@@ -66,7 +64,7 @@ namespace Comgr.CourseProject.UI
             scene.Spheres.Add(new Sphere("f", new Vector3(-0.6f, 0.7f, -0.6f), 0.3f, Colors.Yellow));
             scene.Spheres.Add(new Sphere("g", new Vector3(0.3f, 0.4f, 0.3f), 0.6f, Colors.LightCyan));
 
-            // Question: How do I position the light source?
+            // Question: How should I position the light source?
             scene.LightSources.Add(new LightSource("w", new Vector3(0, -0.9f, 0), Colors.White));
 
             var dpiScale = VisualTreeHelper.GetDpi(this);
