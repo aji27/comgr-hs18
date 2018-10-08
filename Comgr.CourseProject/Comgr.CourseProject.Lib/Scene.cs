@@ -20,6 +20,7 @@ namespace Comgr.CourseProject.Lib
         private float _fieldOfView;
 
         private ICollection<Sphere> _sphereCollection;
+        private ICollection<LightSource> _lightSourceCollection;
 
         public Scene(Vector3 eye, Vector3 lookAt, float fieldOfView)
         {
@@ -28,6 +29,7 @@ namespace Comgr.CourseProject.Lib
             _fieldOfView = fieldOfView;
 
             _sphereCollection = new List<Sphere>();
+            _lightSourceCollection = new List<LightSource>();
         }
 
         //public static readonly Vector3 Up = new Vector3(0, -2002, 0);
@@ -40,6 +42,8 @@ namespace Comgr.CourseProject.Lib
         public float FieldOfView => _fieldOfView;
 
         public ICollection<Sphere> Spheres => _sphereCollection;
+
+        public ICollection<LightSource> LightSources => _lightSourceCollection;
 
         Vector3 fVectorNorm => Vector3.Normalize(LookAt - Eye);
 
@@ -63,8 +67,8 @@ namespace Comgr.CourseProject.Lib
                 {
                     // Question: Why is it mirrored?
 
-                    var x = ((width - i) + alignX) / divideX;
-                    var y = (j + alignY) / divideY;
+                    var x = (i + alignX) / divideX;
+                    var y = ((height - j) + alignY) / divideY;
                     var c = GetColor(x, y);
 
                     bitmap.Set(i, j, c);
@@ -82,7 +86,44 @@ namespace Comgr.CourseProject.Lib
 
             if (hitPoint != null)
             {
-                return hitPoint.Sphere.Color;
+                var rgb = Vector3.Zero;
+                
+                foreach (var lightSource in LightSources)
+                {
+                    var rayVecNorm = Vector3.Normalize(hitPoint.Ray.Direction);
+                    var rayVec = (hitPoint.Ray.Lambda * rayVecNorm);
+                    var hitPointVec = hitPoint.Ray.Eye + rayVec;
+                    var lVec = lightSource.Center - hitPointVec;
+                    var lVecNorm = Vector3.Normalize(lVec);
+                                        
+                    var nVecNorm = Vector3.Normalize(hitPointVec - hitPoint.Sphere.Center);
+                    var cos_theta = Vector3.Dot(nVecNorm, lVecNorm);
+
+                    if (cos_theta >= 0)
+                    {
+                        var light = Conversions.FromColor(lightSource.Color);
+                        var material = Conversions.FromColor(hitPoint.Sphere.Color);
+                        var diffuse = Vector3.Multiply(light, material) * cos_theta;
+                        rgb += diffuse;
+
+                        var walls = new[] { "a", "b", "c", "d", "e" };
+                        var isWall = walls.Contains(hitPoint.Sphere.Name);
+
+                        if (!isWall)
+                        {
+                            var k = 10;
+                            var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
+                            var rVec = lVec - (2 * sVec);
+                            var specular = light * (float)Math.Pow((Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm)), k);
+                            rgb += specular;
+                        }
+                    }
+                }
+
+                var color = Conversions.FromRGB(rgb, gammaCorrection: false);
+                color.Clamp();
+
+                return color;
             }
 
             return Colors.Transparent;
@@ -90,8 +131,9 @@ namespace Comgr.CourseProject.Lib
 
         private Ray CreateEyeRay(Vector2 pixel)
         {
-            var tanFieldOfView = (float)Math.Tan(FieldOfView / 2);
-            var directionVector = fVectorNorm + (pixel.X * rVectorNorm * tanFieldOfView) + (pixel.Y * uVectorNorm * tanFieldOfView);
+            var fieldOfViewInRadians = (Math.PI / 180) * (FieldOfView / 2);
+            var tanOfFieldOfView = (float)Math.Tan(fieldOfViewInRadians);
+            var directionVector = fVectorNorm + (pixel.X * rVectorNorm * tanOfFieldOfView) + (pixel.Y * uVectorNorm * tanOfFieldOfView);
             return new Ray(Eye, directionVector);
         }
 
@@ -112,10 +154,10 @@ namespace Comgr.CourseProject.Lib
 
         private HitPoint FindHitpoint(Ray ray, Sphere sphere)
         {
-            var ceVector = ray.Eye - sphere.Center;
+            var ceVec = ray.Eye - sphere.Center;
 
-            var b = 2 * Vector3.Dot(ceVector, Vector3.Normalize(ray.Direction));
-            var c = Vector3.DistanceSquared(sphere.Center, ray.Eye) - (sphere.Radius * sphere.Radius);
+            var b = 2 * Vector3.Dot(ceVec, Vector3.Normalize(ray.Direction));
+            var c = Vector3.Dot(ceVec, ceVec) - (sphere.Radius * sphere.Radius);
 
             var b_squared = b * b;
             var four_a_c = 4 * c;

@@ -41,6 +41,8 @@ namespace Comgr.CourseProject.Lib
             }
         }
 
+        public static Color GammaCorrect(Color c) => Color.FromScRgb(GammaCorrect(c.ScA), GammaCorrect(c.ScR), GammaCorrect(c.ScG), GammaCorrect(c.ScB));
+
         public static Vector3 FromColor(Color color) => new Vector3(color.ScR, color.ScG, color.ScB);
     }
 }
