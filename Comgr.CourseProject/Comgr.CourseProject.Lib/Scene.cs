@@ -22,7 +22,9 @@ namespace Comgr.CourseProject.Lib
         private ICollection<Sphere> _sphereCollection;
         private ICollection<LightSource> _lightSourceCollection;
 
-        public Scene(Vector3 eye, Vector3 lookAt, float fieldOfView)
+        private readonly bool _gammaCorrect;
+
+        public Scene(Vector3 eye, Vector3 lookAt, float fieldOfView, bool gammaCorrect = true)
         {
             _eyeVector = eye;
             _lookAtVector = lookAt;
@@ -30,6 +32,8 @@ namespace Comgr.CourseProject.Lib
 
             _sphereCollection = new List<Sphere>();
             _lightSourceCollection = new List<LightSource>();
+
+            _gammaCorrect = gammaCorrect;
         }
 
         //public static readonly Vector3 Up = new Vector3(0, -2002, 0);
@@ -84,7 +88,7 @@ namespace Comgr.CourseProject.Lib
             var ray = CreateEyeRay(pixel);
             var rgb = CalcColor(ray);
 
-            return Conversions.FromRGB(rgb, gammaCorrection: false);
+            return Conversions.FromRGB(rgb, _gammaCorrect);
         }
 
         private Vector3 CalcColor(Ray ray, int reflectionLimit = 1)
@@ -135,7 +139,8 @@ namespace Comgr.CourseProject.Lib
                         {
                             // Question: What is meant by "contribute nothing if it is occluded"?
                             //light = Conversions.FromColor(Color.FromRgb(32, 32, 32));
-                            light = Conversions.FromColor(Colors.Gray);
+                            //light = Conversions.FromColor(Colors.Gray);
+                            light_cos = 0.05f;
                         }
 
                         // Diffuse "Lambert" 
