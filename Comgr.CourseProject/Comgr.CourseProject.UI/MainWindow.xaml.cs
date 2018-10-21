@@ -50,8 +50,8 @@ namespace Comgr.CourseProject.UI
             scene.Spheres.Add(new Sphere("c", new Vector3(0, 0, 1001), 1000f, Colors.White));
             scene.Spheres.Add(new Sphere("d", new Vector3(0, -1001, 0), 1000f, Colors.White));
             scene.Spheres.Add(new Sphere("e", new Vector3(0, 1001, 0), 1000f, Colors.White));
-            scene.Spheres.Add(new Sphere("f", new Vector3(-0.6f, 0.7f, -0.6f), 0.3f, Colors.Yellow));
-            scene.Spheres.Add(new Sphere("g", new Vector3(0.3f, 0.4f, 0.3f), 0.6f, Colors.LightCyan));
+            scene.Spheres.Add(new Sphere("f", new Vector3(-0.6f, 0.7f, -0.6f), 0.3f, Colors.Yellow, new CheckerProceduralTexture()));
+            scene.Spheres.Add(new Sphere("g", new Vector3(0.3f, 0.4f, 0.3f), 0.6f, Colors.LightCyan, new BitmapTexture(@"Resources\boden_0125_c.jpg", BitmapTextureMode.SphericalProjection)));
 
             // Question: How should I position the light source?
 

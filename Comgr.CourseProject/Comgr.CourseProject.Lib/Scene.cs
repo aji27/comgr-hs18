@@ -36,7 +36,14 @@ namespace Comgr.CourseProject.Lib
             _gammaCorrect = gammaCorrect;
         }
 
-        //public static readonly Vector3 Up = new Vector3(0, -2002, 0);
+        public bool DiffuseLambert { get; set; } = true;
+
+        public bool SpecularPhong { get; set; } = true;
+
+        public bool Reflection { get; set; } = false;
+
+        public bool Shadows { get; set; } = true;
+        
         public static readonly Vector3 Up = -Vector3.UnitY;
 
         public Vector3 Eye => _eyeVector;
@@ -57,7 +64,7 @@ namespace Comgr.CourseProject.Lib
 
         public ImageSource GetImage(int width, int height, double dpiX, double dpiY)
         {
-            var bitmap = new Bitmap(width, height, dpiX, dpiY);
+            var bitmap = new BitmapImage(width, height, dpiX, dpiY);
 
             var divideX = width / (float)2;
             var alignX = 1 - divideX;
@@ -79,7 +86,7 @@ namespace Comgr.CourseProject.Lib
                 }
             }
 
-            return bitmap.GetImage();
+            return bitmap.GetImageSource();
         }
                 
         public Color GetColor(float x, float y)
@@ -101,26 +108,29 @@ namespace Comgr.CourseProject.Lib
             {
                 var walls = new[] { "a", "b", "c", "d", "e" };
                 var isWall = walls.Contains(hitPoint.Sphere.Name);
-
-                var material = Conversions.FromColor(hitPoint.Sphere.Color);
-
+                                
                 var rayVecNorm = Vector3.Normalize(hitPoint.Ray.DirectionVec);
                 var rayVec = (hitPoint.Ray.Lambda * rayVecNorm) * 0.9999f /* nudging? */;
                 var hitPointVec = hitPoint.Ray.StartVec + rayVec;
                 var nVecNorm = Vector3.Normalize(hitPointVec - hitPoint.Sphere.Center);
 
-                // Reflection
-                if (!isWall /* ignore walls */
-                    && reflectionLimit > 0)
-                {
-                    var reflectionMaterial = Conversions.FromColor(Colors.White);
+                var material = hitPoint.Sphere.CalcColor(hitPointVec);
 
-                    var refVecNorm = Vector3.Normalize(rayVecNorm - 2 * Vector3.Dot(nVecNorm, rayVecNorm) * nVecNorm);
-                    var refVec2 = refVecNorm + (Vector3.One - refVecNorm) * (float)Math.Pow((1 - Vector3.Dot(nVecNorm, refVecNorm)), 5);
-                    var reflectionRay = new Ray(hitPointVec, refVec2);
-                    var reflectionColor = CalcColor(reflectionRay, --reflectionLimit);
-                    var reflection = Vector3.Multiply(reflectionColor, reflectionMaterial) * 0.25f;
-                    rgb += reflection;
+                if (Reflection)
+                {
+                    // Reflection
+                    if (!isWall /* ignore walls */
+                        && reflectionLimit > 0)
+                    {
+                        var reflectionMaterial = Conversions.FromColor(Colors.White);
+
+                        var refVecNorm = Vector3.Normalize(rayVecNorm - 2 * Vector3.Dot(nVecNorm, rayVecNorm) * nVecNorm);
+                        var refVec2 = refVecNorm + (Vector3.One - refVecNorm) * (float)Math.Pow((1 - Vector3.Dot(nVecNorm, refVecNorm)), 5);
+                        var reflectionRay = new Ray(hitPointVec, refVec2);
+                        var reflectionColor = CalcColor(reflectionRay, --reflectionLimit);
+                        var reflection = Vector3.Multiply(reflectionColor, reflectionMaterial) * 0.25f;
+                        rgb += reflection;
+                    }
                 }
 
                 foreach (var lightSource in LightSources)
@@ -134,28 +144,37 @@ namespace Comgr.CourseProject.Lib
                     {
                         var light = Conversions.FromColor(lightSource.Color);
 
-                        // Shadows 
-                        if (HasObjectInFrontOfLightSource(hitPointVec, lightSource))
+                        if (Shadows)
                         {
-                            // Question: What is meant by "contribute nothing if it is occluded"?
-                            //light = Conversions.FromColor(Color.FromRgb(32, 32, 32));
-                            //light = Conversions.FromColor(Colors.Gray);
-                            light_cos = 0.05f;
+                            // Shadows 
+                            if (HasObjectInFrontOfLightSource(hitPointVec, lightSource))
+                            {
+                                // Question: What is meant by "contribute nothing if it is occluded"?
+                                //light = Conversions.FromColor(Color.FromRgb(32, 32, 32));
+                                //light = Conversions.FromColor(Colors.Gray);
+                                light_cos = 0.05f;
+                            }
                         }
 
-                        // Diffuse "Lambert" 
-                        var diffuse = Vector3.Multiply(light, material) * light_cos;
-                        rgb += diffuse;
-
-                        // Ignore walls
-                        if (!isWall)
+                        if (DiffuseLambert)
                         {
-                            // Specular "Phong"
-                            var k = 10;
-                            var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
-                            var rVec = lVec - (2 * sVec);
-                            var specular = light * (float)Math.Pow((Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm)), k);
-                            rgb += specular;
+                            // Diffuse "Lambert" 
+                            var diffuse = Vector3.Multiply(light, material) * light_cos;
+                            rgb += diffuse;
+                        }
+
+                        if (SpecularPhong)
+                        {
+                            // Ignore walls
+                            if (!isWall)
+                            {
+                                // Specular "Phong"
+                                var k = 10;
+                                var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
+                                var rVec = lVec - (2 * sVec);
+                                var specular = light * (float)Math.Pow((Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm)), k);
+                                rgb += specular;
+                            }
                         }
                     }
                 }                

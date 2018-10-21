@@ -33,6 +33,7 @@
     <Reference Include="PresentationCore" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -43,11 +44,15 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Bitmap.cs" />
+    <Compile Include="BitmapImage.cs" />
+    <Compile Include="BitmapTexture.cs" />
+    <Compile Include="BVHNode.cs" />
+    <Compile Include="CheckerProceduralTexture.cs" />
     <Compile Include="Conversions.cs" />
     <Compile Include="GradientRectangle.cs" />
     <Compile Include="HitPoint.cs" />
     <Compile Include="LightSource.cs" />
+    <Compile Include="ITexture.cs" />
     <Compile Include="Ray.cs" />
     <Compile Include="Sphere.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

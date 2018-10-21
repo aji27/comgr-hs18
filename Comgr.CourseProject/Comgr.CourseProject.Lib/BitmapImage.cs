@@ -9,7 +9,7 @@ using System.Windows.Media.Imaging;
 
 namespace Comgr.CourseProject.Lib
 {
-    public class Bitmap
+    public class BitmapImage
     {
         // 4 channels (blue, green, red, alpha). Order of channels is important.
         private const int ChannelCount = 4; 
@@ -19,7 +19,7 @@ namespace Comgr.CourseProject.Lib
         private double _dpiX;
         private double _dpiY;
 
-        public Bitmap(int width, int height, double dpiX, double dpiY)
+        public BitmapImage(int width, int height, double dpiX, double dpiY)
         {
             _pixels = new Color[width, height];
             _dpiX = dpiX;
@@ -32,7 +32,7 @@ namespace Comgr.CourseProject.Lib
 
         public int Height => _pixels.GetLength(1);
 
-        public ImageSource GetImage()
+        public ImageSource GetImageSource()
         {
             byte[] pixels = new byte[Width * Height * ChannelCount];
 
