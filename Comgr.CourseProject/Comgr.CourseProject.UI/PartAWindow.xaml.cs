@@ -7,28 +7,31 @@ using System.Windows.Media;
 
 namespace Comgr.CourseProject.UI
 {
-    /// <summary>
-    /// Interaktionslogik für MainWindow.xaml
-    /// </summary>
     public partial class PartAWindow : Window
     {
         public PartAWindow()
         {
             InitializeComponent();
 
-            this.SizeChanged += MainWindow_SizeChanged;
+            this.Loaded += PartAWindow_Loaded;
+            this.SizeChanged += PartAWindow_SizeChanged;
         }
 
-        private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void PartAWindow_Loaded(object sender, RoutedEventArgs e)
         {
             UpdateImage();
+        }
+
+        private void PartAWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            // UpdateImage();
         }
 
         private void UpdateImage()
         {
             // ShowGradient();
 
-            ShowCornellBox(multipleLightSources: true, coloredLight: true, lotsOfSpheres: false, proceduralTexture: false, bitmapTexture: false);
+            ShowCornellBox(multipleLightSources: false, coloredLight: false, lotsOfSpheres: false, proceduralTexture: false, bitmapTexture: false);
         }
 
         private void ShowGradient()
@@ -46,11 +49,11 @@ namespace Comgr.CourseProject.UI
             var fieldOfView = 36f;
 
             var scene = new Scene(eye, lookAt, fieldOfView);
-            scene.Spheres.Add(new Sphere("a", new Vector3(-1001, 0, 0), 1000f, Colors.Red));
-            scene.Spheres.Add(new Sphere("b", new Vector3(1001, 0, 0), 1000f, Colors.Blue));
-            scene.Spheres.Add(new Sphere("c", new Vector3(0, 0, 1001), 1000f, Colors.White));
-            scene.Spheres.Add(new Sphere("d", new Vector3(0, -1001, 0), 1000f, Colors.White));
-            scene.Spheres.Add(new Sphere("e", new Vector3(0, 1001, 0), 1000f, Colors.White));
+            scene.Spheres.Add(new Sphere("a", new Vector3(-1001, 0, 0), 1000f, Colors.Red, isWall: true));
+            scene.Spheres.Add(new Sphere("b", new Vector3(1001, 0, 0), 1000f, Colors.Blue, isWall: true));
+            scene.Spheres.Add(new Sphere("c", new Vector3(0, 0, 1001), 1000f, Colors.White, isWall: true));
+            scene.Spheres.Add(new Sphere("d", new Vector3(0, -1001, 0), 1000f, Colors.White, isWall: true));
+            scene.Spheres.Add(new Sphere("e", new Vector3(0, 1001, 0), 1000f, Colors.White, isWall: true));
 
             if (!lotsOfSpheres)
             {

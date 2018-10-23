@@ -20,21 +20,29 @@ namespace Comgr.CourseProject.Lib
         /// </summary>
         private float _fieldOfView;
 
-        private ICollection<Sphere> _sphereCollection;
-        private ICollection<LightSource> _lightSourceCollection;
+        private ICollection<Sphere> _spheres;
+        private ICollection<LightSource> _lightSources;
 
         private BVHNode _accelerationStructure;
 
         private readonly Random _random = new Random(Seed: 0);
-        
+        private readonly object _sync_random = new object();
+
         public Scene(Vector3 eye, Vector3 lookAt, float fieldOfView)
         {
             _eyeVector = eye;
             _lookAtVector = lookAt;
             _fieldOfView = fieldOfView;
 
-            _sphereCollection = new List<Sphere>();
-            _lightSourceCollection = new List<LightSource>();
+            _spheres = new List<Sphere>();
+            _lightSources = new List<LightSource>();
+
+            fVectorNorm = Vector3.Normalize(LookAt - Eye);
+            rVectorNorm = Vector3.Normalize(Vector3.Cross(fVectorNorm, Up));
+            uVectorNorm = Vector3.Normalize(Vector3.Cross(rVectorNorm, fVectorNorm));
+
+            var fieldOfViewInRadians = (Math.PI / 180) * (_fieldOfView / 2);
+            FOV_tan = (float)Math.Tan(fieldOfViewInRadians);
         }
 
         public bool AntiAliasing { get; set; } = true;
@@ -49,9 +57,15 @@ namespace Comgr.CourseProject.Lib
 
         public bool SpecularPhong { get; set; } = true;
 
+        public int SpecularPhongFactor { get; set; } = 1000;
+
         public bool Reflection { get; set; } = true;
 
         public bool Shadows { get; set; } = true;
+
+        public bool SoftShadows { get; set; } = true;
+
+        public int SoftShadowFeelers { get; set; } = 8;
 
         public bool AccelerationStructure { get; set; } = false;
 
@@ -63,15 +77,17 @@ namespace Comgr.CourseProject.Lib
 
         public float FieldOfView => _fieldOfView;
 
-        public ICollection<Sphere> Spheres => _sphereCollection;
+        public ICollection<Sphere> Spheres => _spheres;
 
-        public ICollection<LightSource> LightSources => _lightSourceCollection;
+        public ICollection<LightSource> LightSources => _lightSources;
 
-        Vector3 fVectorNorm => Vector3.Normalize(LookAt - Eye);
+        private Vector3 fVectorNorm { get; set; }
 
-        Vector3 rVectorNorm => Vector3.Normalize(Vector3.Cross(fVectorNorm, Up));
+        private Vector3 rVectorNorm { get; set; }
 
-        Vector3 uVectorNorm => Vector3.Normalize(Vector3.Cross(rVectorNorm, fVectorNorm));
+        private Vector3 uVectorNorm { get; set; }
+
+        private float FOV_tan { get; set; }
 
         public ImageSource GetImage(int width, int height, double dpiX, double dpiY)
         {
@@ -79,7 +95,7 @@ namespace Comgr.CourseProject.Lib
 
             if (AccelerationStructure)
             {
-                _accelerationStructure = BVHNode.BuildTopDown(_sphereCollection);
+                _accelerationStructure = BVHNode.BuildTopDown(_spheres);
             }
 
             var bitmap = new BitmapImage(width, height, dpiX, dpiY);
@@ -95,8 +111,6 @@ namespace Comgr.CourseProject.Lib
 
             if (Parallelize)
             {
-                var sync_random = new object();
-
                 Parallel.For(0, width, i =>
                 {
                     Parallel.For(0, height, j =>
@@ -109,7 +123,7 @@ namespace Comgr.CourseProject.Lib
                                 var dx = 0f;
                                 var dy = 0f;
 
-                                lock (sync_random)
+                                lock (_sync_random)
                                 {
                                     dx = (float)_random.NextGaussian(0d, 0.5d);
                                     dy = (float)_random.NextGaussian(0d, 0.5d);
@@ -204,20 +218,19 @@ namespace Comgr.CourseProject.Lib
 
             if (hitPoint != null)
             {
-                var walls = new[] { "a", "b", "c", "d", "e" };
-                var isWall = walls.Contains(hitPoint.Sphere.Name);
-                                
+                var sphere = hitPoint.Sphere;
+                
                 var rayVecNorm = Vector3.Normalize(hitPoint.Ray.DirectionVec);
                 var rayVec = (hitPoint.Ray.Lambda * rayVecNorm) + (-rayVecNorm * 0.001f) /* nudging..? */;
                 var hitPointVec = hitPoint.Ray.StartVec + rayVec;
                 var nVecNorm = Vector3.Normalize(hitPointVec - hitPoint.Sphere.Center);
 
-                var material = hitPoint.Sphere.CalcColor(hitPointVec);
+                var material = sphere.CalcColor(hitPointVec);
 
                 if (Reflection)
                 {
                     // Reflection
-                    if (!isWall /* ignore walls */
+                    if (!sphere.IsWall /* ignore walls */
                         && reflectionLimit > 0)
                     {
                         var reflectionMaterial = Conversions.FromColor(Colors.White);
@@ -244,13 +257,17 @@ namespace Comgr.CourseProject.Lib
 
                         if (Shadows)
                         {
-                            // Shadows 
-                            if (HasObjectInFrontOfLightSource(hitPointVec, lightSource))
+                            if (SoftShadows)
                             {
-                                // Question: What is meant by "contribute nothing if it is occluded"?
-                                //light = Conversions.FromColor(Color.FromRgb(32, 32, 32));
-                                //light = Conversions.FromColor(Colors.Gray);
-                                light_cos = 0.05f;
+                                light_cos *= GetShadowedRatio(hitPointVec, lightSource);
+                            }
+                            else
+                            {
+                                // Shadows 
+                                if (HasObjectInFrontOfLightSource(hitPointVec, lightSource.Center))
+                                {
+                                    light_cos *= 0.01f;
+                                }
                             }
                         }
 
@@ -264,13 +281,12 @@ namespace Comgr.CourseProject.Lib
                         if (SpecularPhong)
                         {
                             // Ignore walls
-                            if (!isWall)
+                            if (!sphere.IsWall)
                             {
                                 // Specular "Phong"
-                                var k = 10;
                                 var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
                                 var rVec = lVec - (2 * sVec);
-                                var specular = light * (float)Math.Pow((Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm)), k);
+                                var specular = light * (float)Math.Pow((Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm)), SpecularPhongFactor);
                                 rgb += specular;
                             }
                         }
@@ -283,9 +299,7 @@ namespace Comgr.CourseProject.Lib
 
         private Ray CreateEyeRay(Vector2 pixel)
         {
-            var fieldOfViewInRadians = (Math.PI / 180) * (FieldOfView / 2);
-            var tanOfFieldOfView = (float)Math.Tan(fieldOfViewInRadians);
-            var directionVector = fVectorNorm + (pixel.X * rVectorNorm * tanOfFieldOfView) + (pixel.Y * uVectorNorm * tanOfFieldOfView);
+            var directionVector = fVectorNorm + (pixel.X * rVectorNorm * FOV_tan) + (pixel.Y * uVectorNorm * FOV_tan);
             return new Ray(Eye, directionVector);
         }
 
@@ -359,9 +373,49 @@ namespace Comgr.CourseProject.Lib
             return hitPoints.OrderBy(h => h.Ray.Lambda).FirstOrDefault();
         }
 
-        private bool HasObjectInFrontOfLightSource(Vector3 hitPointVec, LightSource lightSource)
+        private float GetShadowedRatio(Vector3 hitPointVec, LightSource lightSource)
         {
-            var lVec = lightSource.Center - hitPointVec;
+            int hits = 0;
+
+            for (int i = 0; i < SoftShadowFeelers; i++)
+            {
+                var radius = 0f;
+                var theta = 0f;
+
+                if (Parallelize)
+                {
+                    lock (_sync_random)
+                    {
+                        radius = (float)_random.NextDouble();
+                        theta = (float)(_random.NextDouble() * 2 * Math.PI);
+                    }
+                }
+                else
+                {
+                    radius = (float)_random.NextDouble();
+                    theta = (float)(_random.NextDouble() * 2 * Math.PI);
+                }
+
+                float x = (float)(Math.Sqrt(radius) * Math.Sin(theta));
+                float y = (float)(Math.Sqrt(radius) * Math.Cos(theta));
+
+                var lVec = lightSource.Center - hitPointVec;
+
+                Vector3 xVecNorm = Vector3.Normalize(Vector3.Cross(lVec, Up));
+                Vector3 yVecNorm = Vector3.Normalize(Vector3.Cross(lVec, xVecNorm));
+
+                var randomVec = lightSource.Center + lightSource.Radius * xVecNorm * x + lightSource.Radius * yVecNorm * y;
+
+                if (HasObjectInFrontOfLightSource(hitPointVec, randomVec))
+                    hits++;
+            }
+
+            return (float)(SoftShadowFeelers - hits) / SoftShadowFeelers;
+        }
+
+        private bool HasObjectInFrontOfLightSource(Vector3 hitPointVec, Vector3 pos)
+        {
+            var lVec = pos - hitPointVec;
             var ray = new Ray(hitPointVec, lVec);
             var length = Vector3.DistanceSquared(ray.StartVec, lVec);
 
@@ -403,7 +457,9 @@ namespace Comgr.CourseProject.Lib
         {
             var ceVec = ray.StartVec - sphere.Center;
 
-            var b = 2 * Vector3.Dot(ceVec, Vector3.Normalize(ray.DirectionVec));
+            var rayDirectionVecNorm = Vector3.Normalize(ray.DirectionVec);
+
+            var b = 2 * Vector3.Dot(ceVec, rayDirectionVecNorm);
             var c = Vector3.Dot(ceVec, ceVec) - (sphere.Radius * sphere.Radius);
 
             var b_squared = b * b;
@@ -416,8 +472,6 @@ namespace Comgr.CourseProject.Lib
                 var lambda1 = (-b + sqrtExpr) / 2;
                 var lambda2 = (-b - sqrtExpr) / 2;
 
-                //var lambda = (float)Math.Min(Math.Max(lambda1, 0), Math.Max(lambda2, 0));
-
                 var lambda = 0f;
 
                 if (lambda1 > 0)
@@ -427,7 +481,7 @@ namespace Comgr.CourseProject.Lib
                     lambda = (float)lambda2;
 
                 if (lambda > 0)
-                    return new HitPoint(new Ray(ray.StartVec, lambda, Vector3.Normalize(ray.DirectionVec)), sphere);
+                    return new HitPoint(new Ray(ray.StartVec, lambda, rayDirectionVecNorm), sphere);
             }
 
             return null;

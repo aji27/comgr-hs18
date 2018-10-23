@@ -25,6 +25,10 @@ namespace Comgr.CourseProject.Lib
 
         public Vector3 Center => _centerVector;
 
+        public float Radius => 0.2f;
+
         public Color Color => _color;
+
+
     }
 }
