@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
 
@@ -24,6 +25,8 @@ namespace Comgr.CourseProject.Lib
 
         private readonly bool _gammaCorrect;
 
+        private BVHNode _accelerationStructure;
+
         public Scene(Vector3 eye, Vector3 lookAt, float fieldOfView, bool gammaCorrect = true)
         {
             _eyeVector = eye;
@@ -36,14 +39,18 @@ namespace Comgr.CourseProject.Lib
             _gammaCorrect = gammaCorrect;
         }
 
+        public bool Parallelize { get; set; } = true;
+
         public bool DiffuseLambert { get; set; } = true;
 
         public bool SpecularPhong { get; set; } = true;
 
-        public bool Reflection { get; set; } = false;
+        public bool Reflection { get; set; } = true;
 
         public bool Shadows { get; set; } = true;
-        
+
+        public bool AccelerationStructure { get; set; } = true;
+
         public static readonly Vector3 Up = -Vector3.UnitY;
 
         public Vector3 Eye => _eyeVector;
@@ -64,6 +71,14 @@ namespace Comgr.CourseProject.Lib
 
         public ImageSource GetImage(int width, int height, double dpiX, double dpiY)
         {
+            var sw = Stopwatch.StartNew();
+
+            if (AccelerationStructure
+                && _accelerationStructure == null)
+            {
+                _accelerationStructure = BVHNode.BuildTopDown(_sphereCollection);
+            }
+
             var bitmap = new BitmapImage(width, height, dpiX, dpiY);
 
             var divideX = width / (float)2;
@@ -72,21 +87,57 @@ namespace Comgr.CourseProject.Lib
             var divideY = height / (float)2;
             var alignY = 1 - divideY;
 
-            for (int i = 0; i < width; i++)
+            int workDone = 0;
+            int totalWork = width * height;
+
+            if (Parallelize)
             {
-                for (int j = 0; j < height; j++)
+                Parallel.For(0, width, i =>
                 {
-                    // Question: Why is it mirrored?
+                    Parallel.For(0, height, j =>
+                    {
+                        var x = (i + alignX) / divideX;
+                        var y = ((height - j) + alignY) / divideY;
+                        var c = GetColor(x, y);
 
-                    var x = (i + alignX) / divideX;
-                    var y = ((height - j) + alignY) / divideY;
-                    var c = GetColor(x, y);
+                        bitmap.Set(i, j, c);
 
-                    bitmap.Set(i, j, c);
+                        Interlocked.Increment(ref workDone);
+
+                        if ((int)sw.Elapsed.TotalMilliseconds % 1000 == 0)
+                            Debug.WriteLine($"{((float)workDone / totalWork * 100):F2}% progress. Running time {sw.Elapsed}.");
+                    });
+                });
+            }
+            else
+            {
+                for (int i = 0; i < width; i++)
+                {
+                    for (int j = 0; j < height; j++)
+                    {
+                        // Question: Why is it mirrored?
+
+                        var x = (i + alignX) / divideX;
+                        var y = ((height - j) + alignY) / divideY;
+                        var c = GetColor(x, y);
+
+                        bitmap.Set(i, j, c);
+
+                        ++workDone;
+
+                        if ((int)sw.Elapsed.TotalMilliseconds % 1000 == 0)
+                            Debug.WriteLine($"{((float)workDone / totalWork * 100):F2}% progress. Running time {sw.Elapsed}.");
+                    }
                 }
             }
 
-            return bitmap.GetImageSource();
+            var imageSource = bitmap.GetImageSource();
+
+            sw.Stop();
+
+            Debug.WriteLine($"Image generated in {sw.Elapsed}.");
+
+            return imageSource;
         }
                 
         public Color GetColor(float x, float y)
@@ -110,7 +161,7 @@ namespace Comgr.CourseProject.Lib
                 var isWall = walls.Contains(hitPoint.Sphere.Name);
                                 
                 var rayVecNorm = Vector3.Normalize(hitPoint.Ray.DirectionVec);
-                var rayVec = (hitPoint.Ray.Lambda * rayVecNorm) * 0.9999f /* nudging? */;
+                var rayVec = (hitPoint.Ray.Lambda * rayVecNorm) + (-rayVecNorm * 0.001f) /* nudging..? */;
                 var hitPointVec = hitPoint.Ray.StartVec + rayVec;
                 var nVecNorm = Vector3.Normalize(hitPointVec - hitPoint.Sphere.Center);
 
@@ -191,16 +242,71 @@ namespace Comgr.CourseProject.Lib
             return new Ray(Eye, directionVector);
         }
 
+        private List<HitPoint> FindHitpoints(Ray ray, BVHNode node)
+        {
+            var hitPoints = new List<HitPoint>();
+
+            var queue = new Queue<BVHNode>();
+            queue.Enqueue(node);
+
+            while(queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+
+                if (current.Items.Count > 0)
+                {
+                    foreach (var item in current.Items)
+                    {
+                        var hitPoint = FindHitpoint(ray, item);
+                        if (hitPoint != null)
+                        {
+                            hitPoints.Add(hitPoint);
+                        }
+                    }
+                }
+                else
+                {
+                    if (current.Left != null)
+                    {
+                        var boundingSphere = current.Left.BoundingSphere;
+                        if (FindHitpoint(ray, boundingSphere) != null)
+                        {
+                            queue.Enqueue(current.Left);
+                        }
+                    }
+
+                    if (current.Right != null)
+                    {
+                        var boundingSphere = current.Right.BoundingSphere;
+                        if (FindHitpoint(ray, boundingSphere) != null)
+                        {
+                            queue.Enqueue(current.Right);
+                        }
+                    }
+                }
+            }
+
+            return hitPoints;
+        }
+
         private HitPoint FindClosestHitPoint(Ray ray)
         {
             var hitPoints = new List<HitPoint>();
 
-            foreach (var sphere in Spheres)
+            if (AccelerationStructure)
             {
-                var hitPoint = FindHitpoint(ray, sphere);
+                BVHNode root = _accelerationStructure;
+                hitPoints.AddRange(FindHitpoints(ray, root));
+            }
+            else
+            {
+                foreach (var sphere in Spheres)
+                {
+                    var hitPoint = FindHitpoint(ray, sphere);
 
-                if (hitPoint != null)
-                    hitPoints.Add(hitPoint);
+                    if (hitPoint != null)
+                        hitPoints.Add(hitPoint);
+                }
             }
 
             return hitPoints.OrderBy(h => h.Ray.Lambda).FirstOrDefault();
@@ -212,17 +318,34 @@ namespace Comgr.CourseProject.Lib
             var ray = new Ray(hitPointVec, lVec);
             var length = Vector3.DistanceSquared(ray.StartVec, lVec);
 
-            foreach (var sphere in Spheres)
+            if (AccelerationStructure)
             {
-                var hitPoint = FindHitpoint(ray, sphere);
+                BVHNode root = _accelerationStructure;
+                var hitPoints = FindHitpoints(ray, root);
 
-                if (hitPoint != null)
+                foreach (var hitPoint in hitPoints)
                 {
                     var rayVec = hitPoint.Ray.Lambda * hitPoint.Ray.DirectionVec;
                     var scale = Vector3.DistanceSquared(hitPoint.Ray.StartVec, rayVec) / length;
 
                     if (scale <= 1)
                         return true;
+                }
+            }
+            else
+            {
+                foreach (var sphere in Spheres)
+                {
+                    var hitPoint = FindHitpoint(ray, sphere);
+
+                    if (hitPoint != null)
+                    {
+                        var rayVec = hitPoint.Ray.Lambda * hitPoint.Ray.DirectionVec;
+                        var scale = Vector3.DistanceSquared(hitPoint.Ray.StartVec, rayVec) / length;
+
+                        if (scale <= 1)
+                            return true;
+                    }
                 }
             }
 
@@ -246,7 +369,15 @@ namespace Comgr.CourseProject.Lib
                 var lambda1 = (-b + sqrtExpr) / 2;
                 var lambda2 = (-b - sqrtExpr) / 2;
 
-                var lambda = (float)Math.Min(Math.Max(lambda1, 0), Math.Max(lambda2, 0));
+                //var lambda = (float)Math.Min(Math.Max(lambda1, 0), Math.Max(lambda2, 0));
+
+                var lambda = 0f;
+
+                if (lambda1 > 0)
+                    lambda = (float)lambda1;
+
+                if (lambda2 > 0 && lambda2 < lambda)
+                    lambda = (float)lambda2;
 
                 if (lambda > 0)
                     return new HitPoint(new Ray(ray.StartVec, lambda, Vector3.Normalize(ray.DirectionVec)), sphere);

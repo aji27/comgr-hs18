@@ -1,4 +1,5 @@
 ﻿using Comgr.CourseProject.Lib;
+using System;
 using System.Numerics;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,9 +10,9 @@ namespace Comgr.CourseProject.UI
     /// <summary>
     /// Interaktionslogik für MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class PartAWindow : Window
     {
-        public MainWindow()
+        public PartAWindow()
         {
             InitializeComponent();
 
@@ -27,7 +28,7 @@ namespace Comgr.CourseProject.UI
         {
             // ShowGradient();
 
-            ShowCornellBox(multipleLightSources: true);
+            ShowCornellBox(multipleLightSources: true, lotsOfSpheres: false);
         }
 
         private void ShowGradient()
@@ -38,7 +39,7 @@ namespace Comgr.CourseProject.UI
             Image.Source = gradient.GetBitmap((int)this.Width, (int)this.Height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY);
         }
 
-        private void ShowCornellBox(bool multipleLightSources)
+        private void ShowCornellBox(bool multipleLightSources, bool lotsOfSpheres)
         {
             var eye = new Vector3(0, 0, -4);
             var lookAt = new Vector3(0, 0, 6);
@@ -50,8 +51,28 @@ namespace Comgr.CourseProject.UI
             scene.Spheres.Add(new Sphere("c", new Vector3(0, 0, 1001), 1000f, Colors.White));
             scene.Spheres.Add(new Sphere("d", new Vector3(0, -1001, 0), 1000f, Colors.White));
             scene.Spheres.Add(new Sphere("e", new Vector3(0, 1001, 0), 1000f, Colors.White));
-            scene.Spheres.Add(new Sphere("f", new Vector3(-0.6f, 0.7f, -0.6f), 0.3f, Colors.Yellow, new CheckerProceduralTexture()));
-            scene.Spheres.Add(new Sphere("g", new Vector3(0.3f, 0.4f, 0.3f), 0.6f, Colors.LightCyan, new BitmapTexture(@"Resources\boden_0125_c.jpg", BitmapTextureMode.SphericalProjection)));
+
+            if (!lotsOfSpheres)
+            {
+                scene.Spheres.Add(new Sphere("f", new Vector3(-0.6f, 0.7f, -0.6f), 0.3f, Colors.Yellow /*, new CheckerProceduralTexture() */));
+                scene.Spheres.Add(new Sphere("g", new Vector3(0.3f, 0.4f, 0.3f), 0.6f, Colors.LightCyan /*, new BitmapTexture(@"Resources\boden_0125_c.jpg", BitmapTextureMode.SphericalProjection) */));
+            }
+            else
+            {
+                int numberOfSpheres = 4096;
+                var random = new Random(Seed: 0); // use same seed, so that we can compare results
+
+                for (int i = 0; i < numberOfSpheres; i++)
+                {
+                    var x = (float)(random.NextDouble() * 2) - 1;
+                    var y = (float)(random.NextDouble() * 2) - 1;
+                    var z = (float)(random.NextDouble() * 2) - 1;
+                    var r = 0.01f;
+                    var c = new Color() { ScA = 1, ScR = (float)random.NextDouble(), ScG = (float)random.NextDouble(), ScB = (float)random.NextDouble() };
+
+                    scene.Spheres.Add(new Sphere($"gen{i}", new Vector3(x, y, z), r, c));
+                }
+            }
 
             // Question: How should I position the light source?
 
@@ -72,7 +93,6 @@ namespace Comgr.CourseProject.UI
             Image.Source = scene.GetImage((int)this.Width, (int)this.Height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY);
 
             // Question: Why is there a gap on the right side?
-            // Question: How should I nudge?
             // Question: Why are the edge of my spheres black?
             // Question: Why do my reflections have more depth?
             // Question: You didn't gamma correct in your examples? 
