@@ -19,10 +19,16 @@ namespace Comgr.CourseProject.Lib
         private Bitmap _bitmap;
         private BitmapTextureMode _mode;
 
+        private int _width;
+        private int _height;
+
         public BitmapTexture(Bitmap bitmap, BitmapTextureMode mode)
         {
             _bitmap = bitmap ?? throw new ArgumentNullException(nameof(bitmap));
             _mode = mode;
+
+            _width = _bitmap.Width;
+            _height = _bitmap.Height;
         }
         
         public BitmapTexture(string fileName, BitmapTextureMode mode)
@@ -46,9 +52,12 @@ namespace Comgr.CourseProject.Lib
             switch (_mode)
             {
                 case BitmapTextureMode.PlanarProjection:
-                    s = MapValue(-1f, 1f, 0f, _bitmap.Width - 1, x);
-                    t = MapValue(-1f, 1f, 0f, _bitmap.Height - 1, y);
-                    color = _bitmap.GetPixel(s, t);
+                    s = MapValue(-1f, 1f, 0f, _width - 1, x);
+                    t = MapValue(-1f, 1f, 0f, _height - 1, y);
+
+                    lock(_bitmap)
+                        color = _bitmap.GetPixel(s, t);
+
                     break;
                 case BitmapTextureMode.SphericalProjection:
                     if (x >= -1
@@ -58,10 +67,11 @@ namespace Comgr.CourseProject.Lib
                         && z >= -1
                         && z <= 1)
                     {
-                        s = MapValue((float)-Math.PI, (float)Math.PI, 0f, _bitmap.Width - 1, (float)Math.Atan2(x, z));
-                        t = MapValue(0f, (float)Math.PI, 0f, _bitmap.Height - 1, (float)Math.Acos(y));
+                        s = MapValue((float)-Math.PI, (float)Math.PI, 0f, _width - 1, (float)Math.Atan2(x, z));
+                        t = MapValue(0f, (float)Math.PI, 0f, _height - 1, (float)Math.Acos(y));
 
-                        color = _bitmap.GetPixel(s, t);
+                        lock(_bitmap)
+                            color = _bitmap.GetPixel(s, t);
                     }
                     break;
             }

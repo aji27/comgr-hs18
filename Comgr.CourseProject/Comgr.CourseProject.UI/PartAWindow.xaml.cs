@@ -28,7 +28,7 @@ namespace Comgr.CourseProject.UI
         {
             // ShowGradient();
 
-            ShowCornellBox(multipleLightSources: true, lotsOfSpheres: false);
+            ShowCornellBox(multipleLightSources: true, coloredLight: true, lotsOfSpheres: false, proceduralTexture: true, bitmapTexture: true);
         }
 
         private void ShowGradient()
@@ -39,7 +39,7 @@ namespace Comgr.CourseProject.UI
             Image.Source = gradient.GetBitmap((int)this.Width, (int)this.Height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY);
         }
 
-        private void ShowCornellBox(bool multipleLightSources, bool lotsOfSpheres)
+        private void ShowCornellBox(bool multipleLightSources, bool coloredLight, bool lotsOfSpheres, bool proceduralTexture, bool bitmapTexture)
         {
             var eye = new Vector3(0, 0, -4);
             var lookAt = new Vector3(0, 0, 6);
@@ -54,8 +54,16 @@ namespace Comgr.CourseProject.UI
 
             if (!lotsOfSpheres)
             {
-                scene.Spheres.Add(new Sphere("f", new Vector3(-0.6f, 0.7f, -0.6f), 0.3f, Colors.Yellow /*, new CheckerProceduralTexture() */));
-                scene.Spheres.Add(new Sphere("g", new Vector3(0.3f, 0.4f, 0.3f), 0.6f, Colors.LightCyan /*, new BitmapTexture(@"Resources\boden_0125_c.jpg", BitmapTextureMode.SphericalProjection) */));
+                ITexture procTexture = null;
+                if (proceduralTexture)
+                    procTexture = new CheckerProceduralTexture();
+
+                ITexture bmpTexture = null;
+                if (bitmapTexture)
+                    bmpTexture = new BitmapTexture(@"Resources\arroway.de_tiles-29_d100.jpg", BitmapTextureMode.PlanarProjection);
+
+                scene.Spheres.Add(new Sphere("f", new Vector3(-0.6f, 0.7f, -0.6f), 0.3f, Colors.Yellow, procTexture));
+                scene.Spheres.Add(new Sphere("g", new Vector3(0.3f, 0.4f, 0.3f), 0.6f, Colors.LightCyan, bmpTexture));
             }
             else
             {
@@ -79,14 +87,14 @@ namespace Comgr.CourseProject.UI
             if (!multipleLightSources)
             {
                 // 1 Light Source
-                scene.LightSources.Add(new LightSource("w", new Vector3(0, -0.9f, 0), Colors.White));
+                scene.LightSources.Add(new LightSource("w", new Vector3(0, -0.9f, 0), coloredLight ? Colors.LightSalmon : Colors.White));
             }
             else
             {
                 // 3 Light Sources
-                scene.LightSources.Add(new LightSource("c", new Vector3(0.5f, -0.9f, 0.3f), Colors.Cyan.ChangIntensity(0.5f)));
-                scene.LightSources.Add(new LightSource("m", new Vector3(-0.5f, -0.9f, 0.3f), Colors.Magenta.ChangIntensity(0.5f)));
-                scene.LightSources.Add(new LightSource("y", new Vector3(0, -0.9f, -0.6f), Colors.Yellow.ChangIntensity(0.5f)));
+                scene.LightSources.Add(new LightSource("c", new Vector3(0.5f, -0.9f, 0.3f), coloredLight ?  Colors.Cyan.ChangIntensity(0.5f) : Colors.White.ChangIntensity(0.5f)));
+                scene.LightSources.Add(new LightSource("m", new Vector3(-0.5f, -0.9f, 0.3f), coloredLight ? Colors.Magenta.ChangIntensity(0.5f) : Colors.White.ChangIntensity(0.5f)));
+                scene.LightSources.Add(new LightSource("y", new Vector3(0, -0.9f, -0.6f), coloredLight ? Colors.Yellow.ChangIntensity(0.5f) : Colors.White.ChangIntensity(0.5f)));
             }
 
             var dpiScale = VisualTreeHelper.GetDpi(this);

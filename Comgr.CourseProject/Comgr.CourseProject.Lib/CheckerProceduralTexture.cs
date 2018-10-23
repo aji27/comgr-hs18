@@ -13,12 +13,9 @@ namespace Comgr.CourseProject.Lib
 
         public Vector3 CalcColor(Vector3 point)
         {
-            // Question: How do I achieve the same effect as showed in the slides?
-            // Question: Do I have to implement 'Perlin noise' as an additional procedural texture?
-
-            if (Frac(point.X * _scale) < 0.5
-                && Frac(point.Y * _scale) < 0.5
-                && Frac(point.Z * _scale) < 0.5)
+            if ((AbsFrac(point.X * _scale) < 0.5)
+                ^ (AbsFrac(point.Y * _scale) < 0.5)
+                ^ (AbsFrac(point.Z * _scale) < 0.5))
             {
                 return new Vector3(1, 0, 0);
             }
@@ -26,6 +23,6 @@ namespace Comgr.CourseProject.Lib
                 return new Vector3(0, 0, 0);
         }
 
-        private static double Frac(double value) => value - Math.Truncate(value);
+        private static double AbsFrac(double value) => Math.Abs(value - Math.Truncate(value));
     }
 }
