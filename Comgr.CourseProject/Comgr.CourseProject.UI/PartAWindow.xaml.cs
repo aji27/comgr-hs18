@@ -28,7 +28,7 @@ namespace Comgr.CourseProject.UI
         {
             // ShowGradient();
 
-            ShowCornellBox(multipleLightSources: true, coloredLight: false, lotsOfSpheres: false, proceduralTexture: true, bitmapTexture: true);
+            ShowCornellBox(multipleLightSources: true, coloredLight: true, lotsOfSpheres: false, proceduralTexture: false, bitmapTexture: false);
         }
 
         private void ShowGradient()

@@ -25,6 +25,8 @@ namespace Comgr.CourseProject.Lib
 
         private BVHNode _accelerationStructure;
 
+        private readonly Random _random = new Random(Seed: 0);
+        
         public Scene(Vector3 eye, Vector3 lookAt, float fieldOfView)
         {
             _eyeVector = eye;
@@ -35,6 +37,10 @@ namespace Comgr.CourseProject.Lib
             _lightSourceCollection = new List<LightSource>();
         }
 
+        public bool AntiAliasing { get; set; } = true;
+
+        public int AntiAliasingSampleSize { get; set; } = 64;
+
         public bool Parallelize { get; set; } = true;
 
         public bool GammaCorrect { get; set; } = true;
@@ -43,11 +49,11 @@ namespace Comgr.CourseProject.Lib
 
         public bool SpecularPhong { get; set; } = true;
 
-        public bool Reflection { get; set; } = false;
+        public bool Reflection { get; set; } = true;
 
         public bool Shadows { get; set; } = true;
 
-        public bool AccelerationStructure { get; set; } = true;
+        public bool AccelerationStructure { get; set; } = false;
 
         public static readonly Vector3 Up = -Vector3.UnitY;
 
@@ -71,8 +77,7 @@ namespace Comgr.CourseProject.Lib
         {
             var sw = Stopwatch.StartNew();
 
-            if (AccelerationStructure
-                && _accelerationStructure == null)
+            if (AccelerationStructure)
             {
                 _accelerationStructure = BVHNode.BuildTopDown(_sphereCollection);
             }
@@ -90,15 +95,44 @@ namespace Comgr.CourseProject.Lib
 
             if (Parallelize)
             {
+                var sync_random = new object();
+
                 Parallel.For(0, width, i =>
                 {
                     Parallel.For(0, height, j =>
                     {
-                        var x = (i + alignX) / divideX;
-                        var y = ((height - j) + alignY) / divideY;
-                        var c = GetColor(x, y);
+                        if (AntiAliasing)
+                        {
+                            Vector3 result = Vector3.Zero;
+                            for (int k = 0; k < AntiAliasingSampleSize; k++)
+                            {
+                                var dx = 0f;
+                                var dy = 0f;
 
-                        bitmap.Set(i, j, c);
+                                lock (sync_random)
+                                {
+                                    dx = (float)_random.NextGaussian(0d, 0.5d);
+                                    dy = (float)_random.NextGaussian(0d, 0.5d);
+                                }
+
+                                var x = (i + alignX + dx) / divideX;
+                                var y = ((height - j) + alignY + dy) / divideY;
+                                var rgb = GetColor(x, y);
+                                result += rgb;
+                            }
+
+                            var avg_rgb = result * (1f / AntiAliasingSampleSize);
+                            var c = Conversions.FromRGB(avg_rgb, GammaCorrect);
+                            bitmap.Set(i, j, c);
+                        }
+                        else
+                        {
+                            var x = (i + alignX) / divideX;
+                            var y = ((height - j) + alignY) / divideY;
+                            var rgb = GetColor(x, y);
+                            var c = Conversions.FromRGB(rgb, GammaCorrect);
+                            bitmap.Set(i, j, c);
+                        }
 
                         Interlocked.Increment(ref workDone);
 
@@ -113,13 +147,30 @@ namespace Comgr.CourseProject.Lib
                 {
                     for (int j = 0; j < height; j++)
                     {
-                        // Question: Why is it mirrored?
+                        if (AntiAliasing)
+                        {
+                            Vector3 result = Vector3.Zero;
+                            for (int k = 0; k < AntiAliasingSampleSize; k++)
+                            {
+                                var x = (i + alignX + (float)_random.NextGaussian(0d, 0.5d)) / divideX;
+                                var y = ((height - j) + alignY + (float)_random.NextGaussian(0d, 0.5d)) / divideY;
+                                var rgb = GetColor(x, y);
+                                result += rgb;
+                            }
 
-                        var x = (i + alignX) / divideX;
-                        var y = ((height - j) + alignY) / divideY;
-                        var c = GetColor(x, y);
-
-                        bitmap.Set(i, j, c);
+                            var avg_rgb = result * (1f / AntiAliasingSampleSize);
+                            var c = Conversions.FromRGB(avg_rgb, GammaCorrect);
+                            bitmap.Set(i, j, c);
+                        }
+                        else
+                        {
+                            // Question: Why is it mirrored?
+                            var x = (i + alignX) / divideX;
+                            var y = ((height - j) + alignY) / divideY;
+                            var rgb = GetColor(x, y);
+                            var c = Conversions.FromRGB(rgb, GammaCorrect);
+                            bitmap.Set(i, j, c);
+                        }
 
                         ++workDone;
 
@@ -138,13 +189,11 @@ namespace Comgr.CourseProject.Lib
             return imageSource;
         }
                 
-        public Color GetColor(float x, float y)
+        public Vector3 GetColor(float x, float y)
         {
             var pixel = new Vector2(x, y);
             var ray = CreateEyeRay(pixel);
-            var rgb = CalcColor(ray);
-
-            return Conversions.FromRGB(rgb, GammaCorrect);
+            return CalcColor(ray);
         }
 
         private Vector3 CalcColor(Ray ray, int reflectionLimit = 1)

@@ -53,6 +53,7 @@
     <Compile Include="HitPoint.cs" />
     <Compile Include="LightSource.cs" />
     <Compile Include="ITexture.cs" />
+    <Compile Include="RandomExtensions.cs" />
     <Compile Include="Ray.cs" />
     <Compile Include="Sphere.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
