@@ -28,7 +28,7 @@ namespace Comgr.CourseProject.UI
         {
             // ShowGradient();
 
-            ShowCornellBox(multipleLightSources: true, coloredLight: true, lotsOfSpheres: false, proceduralTexture: true, bitmapTexture: true);
+            ShowCornellBox(multipleLightSources: true, coloredLight: false, lotsOfSpheres: false, proceduralTexture: true, bitmapTexture: true);
         }
 
         private void ShowGradient()
@@ -45,7 +45,7 @@ namespace Comgr.CourseProject.UI
             var lookAt = new Vector3(0, 0, 6);
             var fieldOfView = 36f;
 
-            var scene = new Scene(eye, lookAt, fieldOfView, gammaCorrect: false);
+            var scene = new Scene(eye, lookAt, fieldOfView);
             scene.Spheres.Add(new Sphere("a", new Vector3(-1001, 0, 0), 1000f, Colors.Red));
             scene.Spheres.Add(new Sphere("b", new Vector3(1001, 0, 0), 1000f, Colors.Blue));
             scene.Spheres.Add(new Sphere("c", new Vector3(0, 0, 1001), 1000f, Colors.White));

@@ -23,11 +23,9 @@ namespace Comgr.CourseProject.Lib
         private ICollection<Sphere> _sphereCollection;
         private ICollection<LightSource> _lightSourceCollection;
 
-        private readonly bool _gammaCorrect;
-
         private BVHNode _accelerationStructure;
 
-        public Scene(Vector3 eye, Vector3 lookAt, float fieldOfView, bool gammaCorrect = true)
+        public Scene(Vector3 eye, Vector3 lookAt, float fieldOfView)
         {
             _eyeVector = eye;
             _lookAtVector = lookAt;
@@ -35,17 +33,17 @@ namespace Comgr.CourseProject.Lib
 
             _sphereCollection = new List<Sphere>();
             _lightSourceCollection = new List<LightSource>();
-
-            _gammaCorrect = gammaCorrect;
         }
 
         public bool Parallelize { get; set; } = true;
+
+        public bool GammaCorrect { get; set; } = true;
 
         public bool DiffuseLambert { get; set; } = true;
 
         public bool SpecularPhong { get; set; } = true;
 
-        public bool Reflection { get; set; } = true;
+        public bool Reflection { get; set; } = false;
 
         public bool Shadows { get; set; } = true;
 
@@ -146,7 +144,7 @@ namespace Comgr.CourseProject.Lib
             var ray = CreateEyeRay(pixel);
             var rgb = CalcColor(ray);
 
-            return Conversions.FromRGB(rgb, _gammaCorrect);
+            return Conversions.FromRGB(rgb, GammaCorrect);
         }
 
         private Vector3 CalcColor(Ray ray, int reflectionLimit = 1)
