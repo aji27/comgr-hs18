@@ -31,7 +31,7 @@ namespace Comgr.CourseProject.UI
         {
             // ShowGradient();
 
-            ShowCornellBox(multipleLightSources: false, coloredLight: false, lotsOfSpheres: false, proceduralTexture: false, bitmapTexture: false, darken: true);
+            ShowCornellBox(multipleLightSources: false, coloredLight: false, lotsOfSpheres: false, proceduralTexture: false, bitmapTexture: false, pathTracing: true);
         }
 
         private void ShowGradient()
@@ -42,13 +42,13 @@ namespace Comgr.CourseProject.UI
             Image.Source = gradient.GetBitmap((int)this.Width, (int)this.Height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY);
         }
 
-        private void ShowCornellBox(bool multipleLightSources, bool coloredLight, bool lotsOfSpheres, bool proceduralTexture, bool bitmapTexture, bool darken)
+        private void ShowCornellBox(bool multipleLightSources, bool coloredLight, bool lotsOfSpheres, bool proceduralTexture, bool bitmapTexture, bool pathTracing)
         {
             var eye = new Vector3(0, 0, -4);
             var lookAt = new Vector3(0, 0, 6);
             var fieldOfView = 36f;
 
-            var colorBrightness = darken ? 1f : 1f;
+            var colorBrightness = 1f;
 
             var scene = new Scene(eye, lookAt, fieldOfView);
             scene.Spheres.Add(new Sphere("a", new Vector3(-1001, 0, 0), 1000f, Colors.Red.ChangIntensity(colorBrightness), isWall: true));
@@ -87,20 +87,31 @@ namespace Comgr.CourseProject.UI
                 }
             }
 
-            // Question: How should I position the light source?
-
-            if (!multipleLightSources)
+            if (pathTracing)
             {
-                // 1 Light Source
-                //scene.LightSources.Add(new LightSource("w", new Vector3(0, -0.9f, 0), (coloredLight ? Colors.LightSalmon : Colors.White).ChangIntensity(colorBrightness)));
-                scene.LightSources.Add(new LightSource("w", new Vector3(0, 0, 0), (coloredLight ? Colors.LightSalmon : Colors.White).ChangIntensity(colorBrightness)));
+                if (!multipleLightSources)
+                {
+                    scene.Spheres.Add(new Sphere("w", new Vector3(0, -6.99f, 0), 6f, Colors.White.ChangIntensity(colorBrightness), isEmissive: true));
+                }
+                else
+                {
+                    // ToDo
+                }
             }
             else
             {
-                // 3 Light Sources
-                scene.LightSources.Add(new LightSource("c", new Vector3(0.5f, -0.9f, 0.3f), (coloredLight ?  Colors.Cyan.ChangIntensity(0.5f) : Colors.White.ChangIntensity(0.5f)).ChangIntensity(colorBrightness)));
-                scene.LightSources.Add(new LightSource("m", new Vector3(-0.5f, -0.9f, 0.3f), (coloredLight ? Colors.Magenta.ChangIntensity(0.5f) : Colors.White.ChangIntensity(0.5f)).ChangIntensity(colorBrightness)));
-                scene.LightSources.Add(new LightSource("y", new Vector3(0, -0.9f, -0.6f), (coloredLight ? Colors.Yellow.ChangIntensity(0.5f) : Colors.White.ChangIntensity(0.5f)).ChangIntensity(colorBrightness)));
+                if (!multipleLightSources)
+                {
+                    // 1 Light Source
+                    scene.LightSources.Add(new LightSource("w", new Vector3(0, -0.9f, 0), (coloredLight ? Colors.LightSalmon : Colors.White).ChangIntensity(colorBrightness)));
+                }
+                else
+                {
+                    // 3 Light Sources
+                    scene.LightSources.Add(new LightSource("c", new Vector3(0.5f, -0.9f, 0.3f), (coloredLight ? Colors.Cyan.ChangIntensity(0.5f) : Colors.White.ChangIntensity(0.5f)).ChangIntensity(colorBrightness)));
+                    scene.LightSources.Add(new LightSource("m", new Vector3(-0.5f, -0.9f, 0.3f), (coloredLight ? Colors.Magenta.ChangIntensity(0.5f) : Colors.White.ChangIntensity(0.5f)).ChangIntensity(colorBrightness)));
+                    scene.LightSources.Add(new LightSource("y", new Vector3(0, -0.9f, -0.6f), (coloredLight ? Colors.Yellow.ChangIntensity(0.5f) : Colors.White.ChangIntensity(0.5f)).ChangIntensity(colorBrightness)));
+                }
             }
 
             var dpiScale = VisualTreeHelper.GetDpi(this);

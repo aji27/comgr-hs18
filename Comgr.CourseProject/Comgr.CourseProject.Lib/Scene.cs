@@ -15,6 +15,8 @@ namespace Comgr.CourseProject.Lib
         private readonly Random _random = new Random(Seed: 0);
         private readonly object _sync_random = new object();
 
+        private const float _pdf = (1f / (2 * (float)Math.PI));
+
         private Vector3 _eyeVector;
         private Vector3 _lookAtVector;
         private float _fieldOfView;
@@ -55,6 +57,8 @@ namespace Comgr.CourseProject.Lib
 
         public bool Reflection { get; set; } = false;
 
+        public int ReflectionBounces { get; set; } = 1;
+
         public bool Shadows { get; set; } = true;
 
         public bool SoftShadows { get; set; } = false;
@@ -65,7 +69,9 @@ namespace Comgr.CourseProject.Lib
 
         public bool PathTracing { get; set; } = true;
 
-        public int PathTracingRays { get; set; } = 128;
+        public int PathTracingRays { get; set; } = 4;
+
+        public int PathTracingMaxBounces { get; set; } = 5;
 
         public static readonly Vector3 Up = -Vector3.UnitY;
 
@@ -205,10 +211,10 @@ namespace Comgr.CourseProject.Lib
         {
             var pixel = new Vector2(x, y);
             var ray = CreateEyeRay(pixel);
-            return CalcColor(ray);
+            return CalcColor(ray, PathTracingMaxBounces, ReflectionBounces);
         }
-
-        private Vector3 CalcColor(Ray ray, int reflectionLimit = 1, int pathTracingLimit = 1)
+        
+        private Vector3 CalcColor(Ray ray, int pathTracingLimit, int reflectionLimit)
         {
             var rgb = Vector3.Zero;
 
@@ -217,7 +223,7 @@ namespace Comgr.CourseProject.Lib
             if (hitPoint != null)
             {
                 var sphere = hitPoint.Sphere;
-                
+
                 var rayVecNorm = Vector3.Normalize(hitPoint.Ray.DirectionVec);
                 var rayVec = (hitPoint.Ray.Lambda * rayVecNorm) + (-rayVecNorm * 0.001f) /* nudging..? */;
                 var hitPointVec = hitPoint.Ray.StartVec + rayVec;
@@ -225,151 +231,179 @@ namespace Comgr.CourseProject.Lib
 
                 var material = sphere.CalcColor(hitPointVec);
 
-                var directDiffuse = Vector3.Zero;
-
-                if (Reflection)
+                if (!PathTracing)
                 {
-                    // Reflection
-                    if (!sphere.IsWall /* ignore walls */
-                        && reflectionLimit > 0)
+                    if (Reflection)
                     {
-                        var reflectionMaterial = Conversions.FromColor(Colors.White);
-
-                        var refVecNorm = Vector3.Normalize(rayVecNorm - 2 * Vector3.Dot(nVecNorm, rayVecNorm) * nVecNorm);
-                        var refVec2 = refVecNorm + (Vector3.One - refVecNorm) * (float)Math.Pow((1 - Vector3.Dot(nVecNorm, refVecNorm)), 5);
-                        var reflectionRay = new Ray(hitPointVec, refVec2);
-                        var reflectionColor = CalcColor(reflectionRay, --reflectionLimit);
-                        var reflection = Vector3.Multiply(reflectionColor, reflectionMaterial) * 0.25f;
-                        rgb += reflection;
-                    }
-                }
-
-                foreach (var lightSource in LightSources)
-                {
-                    var lVec = lightSource.Center - hitPointVec;
-                    var lVecNorm = Vector3.Normalize(lVec);
-
-                    var light_cos = Vector3.Dot(nVecNorm, lVecNorm);
-
-                    if (light_cos >= 0)
-                    {
-                        var light = Conversions.FromColor(lightSource.Color);
-
-                        if (Shadows)
+                        // Reflection
+                        if (!sphere.IsWall /* ignore walls */
+                            && reflectionLimit > 0)
                         {
-                            if (SoftShadows)
+                            var reflectionMaterial = Conversions.FromColor(Colors.White);
+
+                            var refVecNorm = Vector3.Normalize(rayVecNorm - 2 * Vector3.Dot(nVecNorm, rayVecNorm) * nVecNorm);
+                            var refVec2 = refVecNorm + (Vector3.One - refVecNorm) * (float)Math.Pow((1 - Vector3.Dot(nVecNorm, refVecNorm)), 5);
+                            var reflectionRay = new Ray(hitPointVec, refVec2);
+                            var reflectionColor = CalcColor(reflectionRay, 0, --reflectionLimit);
+                            var reflection = Vector3.Multiply(reflectionColor, reflectionMaterial) * 0.25f;
+                            rgb += reflection;
+                        }
+                    }
+
+                    foreach (var lightSource in LightSources)
+                    {
+                        var lVec = lightSource.Center - hitPointVec;
+                        var lVecNorm = Vector3.Normalize(lVec);
+
+                        var light_cos = Vector3.Dot(nVecNorm, lVecNorm);
+
+                        if (light_cos >= 0)
+                        {
+                            var light = Conversions.FromColor(lightSource.Color);
+
+                            if (Shadows)
                             {
-                                light_cos *= GetShadowedRatio(hitPointVec, lightSource);
-                            }
-                            else
-                            {
-                                // Shadows 
-                                if (HasObjectInFrontOfLightSource(hitPointVec, lightSource.Center))
+                                if (SoftShadows)
                                 {
-                                    light_cos *= 0.01f;
+                                    light_cos *= GetShadowedRatio(hitPointVec, lightSource);
+                                }
+                                else
+                                {
+                                    // Shadows 
+                                    if (HasObjectInFrontOfLightSource(hitPointVec, lightSource.Center))
+                                    {
+                                        light_cos *= 0.01f;
+                                    }
+                                }
+                            }
+
+                            if (DiffuseLambert)
+                            {
+                                // Diffuse "Lambert" 
+                                var diffuse = Vector3.Multiply(light, material) * light_cos;
+                                rgb += diffuse;
+                            }
+
+                            if (SpecularPhong)
+                            {
+                                // Ignore walls
+                                if (!sphere.IsWall)
+                                {
+                                    // Specular "Phong"
+                                    var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
+                                    var rVec = lVec - (2 * sVec);
+                                    var specular = light * (float)Math.Pow((Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm)), SpecularPhongFactor);
+                                    rgb += specular;
                                 }
                             }
                         }
-
-                        if (DiffuseLambert)
-                        {
-                            // Diffuse "Lambert" 
-                            var diffuse = Vector3.Multiply(light, material) * light_cos;
-                            directDiffuse += diffuse;
-                        }
-
-                        if (SpecularPhong)
-                        {
-                            // Ignore walls
-                            if (!sphere.IsWall)
-                            {
-                                // Specular "Phong"
-                                var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
-                                var rVec = lVec - (2 * sVec);
-                                var specular = light * (float)Math.Pow((Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm)), SpecularPhongFactor);
-                                rgb += specular;
-                            }
-                        }
                     }
                 }
-                
-                if (PathTracing)
+                else
                 {
-                    var russianRoulette = 0d;
-
-                    if (Parallelize)
+                    if (!sphere.IsEmissive)
                     {
-                        lock (_sync_random)
+                        // material *= 5;
+                        material *= 10000;
+                    }
+
+                    if (pathTracingLimit > 0)
+                    {
+                        var numberOfRandomRays = 0;
+
+                        bool isBounced = pathTracingLimit < PathTracingMaxBounces;
+
+                        if (!isBounced)
                         {
-                            russianRoulette = _random.NextDouble();
+                            numberOfRandomRays = PathTracingRays;
                         }
-                    }
-                    else
-                    {
-                        russianRoulette = _random.NextDouble();
-                    }
-
-                    if (pathTracingLimit > 0
-                        && russianRoulette > 0.2d)
-                    {
-                        // Source: https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
-
-                        Vector3 indirectDiffuse = Vector3.Zero;
-
-                        Vector3 ntVec = Vector3.Zero;
-
-                        if (Math.Abs(nVecNorm.X) > Math.Abs(nVecNorm.Y))
-                            ntVec = (new Vector3(nVecNorm.Z, 0, -nVecNorm.X) / (float)Math.Sqrt(nVecNorm.X * nVecNorm.X + nVecNorm.Z * nVecNorm.Z));
                         else
-                            ntVec = (new Vector3(0, -nVecNorm.Z, nVecNorm.Y) / (float)Math.Sqrt(nVecNorm.Y * nVecNorm.Y + nVecNorm.Z * nVecNorm.Z));
-
-                        var nbVec = Vector3.Cross(nVecNorm, ntVec);
-
-                        for (int i = 0; i < PathTracingRays; i++)
                         {
-                            var cosTheta = 0f;
-                            var phi = 0f;
+                            var russianRoulette = 0f;
 
                             if (Parallelize)
                             {
                                 lock (_sync_random)
                                 {
-                                    cosTheta = (float)_random.NextDouble();
-                                    phi = (float)(_random.NextDouble() * 2 * Math.PI);
+                                    russianRoulette = (float)_random.NextDouble();
                                 }
                             }
                             else
                             {
-                                cosTheta = (float)_random.NextDouble();
-                                phi = (float)(_random.NextDouble() * 2 * Math.PI);
+                                russianRoulette = (float)_random.NextDouble();
                             }
 
-                            var sinTheta = (float)Math.Sqrt(1 - cosTheta * cosTheta);
-                            float x = sinTheta * (float)Math.Cos(phi);
-                            float z = sinTheta * (float)Math.Sin(phi);
-
-                            var sampleLocalVec = new Vector3(x, cosTheta, z);
-                            var sampleWorldVec = new Vector3()
+                            if (russianRoulette > 0.2f)
                             {
-                                X = sampleLocalVec.X * nbVec.X + sampleLocalVec.Y * nVecNorm.X + sampleLocalVec.Z * ntVec.X,
-                                Y = sampleLocalVec.X * nbVec.Y + sampleLocalVec.Y * nVecNorm.Y + sampleLocalVec.Z * ntVec.Y,
-                                Z = sampleLocalVec.X * nbVec.Z + sampleLocalVec.Y * nVecNorm.Z + sampleLocalVec.Z * ntVec.Z
-                            };
-
-                            var randomRay = new Ray(hitPointVec, sampleWorldVec);
-                            indirectDiffuse += CalcColor(randomRay, reflectionLimit, pathTracingLimit - 1) * cosTheta;                            
+                                numberOfRandomRays = 1;
+                            }
                         }
 
-                        indirectDiffuse /= PathTracingRays;
+                        if (numberOfRandomRays > 0)
+                        {
+                            // Source: https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
 
-                        rgb += Vector3.Multiply((directDiffuse / (float)Math.PI + 2 * indirectDiffuse), material);
+                            Vector3 indirectDiffuse = Vector3.Zero;
+
+                            Vector3 ntVec = Vector3.Zero;
+
+                            if (Math.Abs(nVecNorm.X) > Math.Abs(nVecNorm.Y))
+                                ntVec = (new Vector3(nVecNorm.Z, 0, -nVecNorm.X) / (float)Math.Sqrt(nVecNorm.X * nVecNorm.X + nVecNorm.Z * nVecNorm.Z));
+                            else
+                                ntVec = (new Vector3(0, -nVecNorm.Z, nVecNorm.Y) / (float)Math.Sqrt(nVecNorm.Y * nVecNorm.Y + nVecNorm.Z * nVecNorm.Z));
+
+                            var nbVec = Vector3.Cross(nVecNorm, ntVec);
+
+                            for (int i = 0; i < numberOfRandomRays; i++)
+                            {
+                                var cosTheta = 0f;
+                                var phi = 0f;
+
+                                if (Parallelize)
+                                {
+                                    lock (_sync_random)
+                                    {
+                                        cosTheta = (float)_random.NextDouble();
+                                        phi = (float)(_random.NextDouble() * 2 * Math.PI);
+                                    }
+                                }
+                                else
+                                {
+                                    cosTheta = (float)_random.NextDouble();
+                                    phi = (float)(_random.NextDouble() * 2 * Math.PI);
+                                }
+
+                                var sinTheta = (float)Math.Sqrt(1 - cosTheta * cosTheta);
+                                float x = sinTheta * (float)Math.Cos(phi);
+                                float z = sinTheta * (float)Math.Sin(phi);
+
+                                var sampleLocalVec = new Vector3(x, cosTheta, z);
+                                var sampleWorldVec = new Vector3()
+                                {
+                                    X = sampleLocalVec.X * nbVec.X + sampleLocalVec.Y * nVecNorm.X + sampleLocalVec.Z * ntVec.X,
+                                    Y = sampleLocalVec.X * nbVec.Y + sampleLocalVec.Y * nVecNorm.Y + sampleLocalVec.Z * ntVec.Y,
+                                    Z = sampleLocalVec.X * nbVec.Z + sampleLocalVec.Y * nVecNorm.Z + sampleLocalVec.Z * ntVec.Z
+                                };
+
+                                var randomRay = new Ray(hitPointVec, sampleWorldVec);
+                                indirectDiffuse += CalcColor(randomRay, pathTracingLimit - 1, 0) * cosTheta;
+                            }
+
+                            indirectDiffuse /= numberOfRandomRays * _pdf;
+
+                            rgb += Vector3.Multiply(indirectDiffuse, material);
+
+                            //var surfaceAlbedo = 0.18f;
+                            //rgb += Vector3.Multiply(indirectDiffuse, material) * (surfaceAlbedo / (float)Math.PI) * (isBounced ? 1.25f : 1f); // value correction, 1 / (1 - p);
+                        }
+                    }
+                    else
+                    {
+                        rgb += material;
                     }
                 }
-                else
-                {
-                    rgb += directDiffuse;
-                }
             }
+        
 
             return rgb;
         }
