@@ -7,6 +7,7 @@
         mc:Ignorable="d"
         Title="comgr - HS18 - course project - Ajanth Kandasamy" Height="700" Width="700">
     <Grid x:Name="LayoutRoot">
-        <Image x:Name="Image" HorizontalAlignment="Left" VerticalAlignment="Top" />
+        <TextBox x:Name="Output" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+        <Image x:Name="Image" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
     </Grid>
 </Window>

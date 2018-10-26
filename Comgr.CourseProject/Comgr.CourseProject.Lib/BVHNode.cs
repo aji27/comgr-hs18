@@ -97,20 +97,20 @@ namespace Comgr.CourseProject.Lib
             return splitOrder.OrderByDescending(t => t.Item1).Select(t => t.Item2).ToArray();
         }
 
-        public static BVHNode BuildTopDown(IEnumerable<Sphere> spheres, bool print = false)
+        public static BVHNode BuildTopDown(IEnumerable<Sphere> spheres, Action<string> logger, bool print = false)
         {
             BVHNode rootNode = new BVHNode(spheres.ToArray());
-            BuildTopDown(rootNode);
+            BuildTopDown(rootNode, logger);
 
             if (print)
             {
-                RecursivePrint(rootNode);
+                RecursivePrint(rootNode, logger);
             }
 
             return rootNode;
         }
 
-        private static void BuildTopDown(BVHNode node)
+        private static void BuildTopDown(BVHNode node, Action<string> logger)
         {
             int iterations = 0;
 
@@ -165,7 +165,7 @@ namespace Comgr.CourseProject.Lib
                 }
             }
 
-            Debug.WriteLine($"BVH constructed in '{iterations}' iterations.");
+            logger($"BVH constructed in '{iterations}' iterations.");
         }
         
         private static float ValueAt(Vector3 v, int pos)
@@ -180,7 +180,7 @@ namespace Comgr.CourseProject.Lib
                 throw new NotSupportedException();
         }
 
-        public static void RecursivePrint(BVHNode node, int indent = 0)
+        public static void RecursivePrint(BVHNode node, Action<string> logger, int indent = 0)
         {
             if (node != null)
             {
@@ -192,13 +192,13 @@ namespace Comgr.CourseProject.Lib
                 var indentStr2 = indentStr1 + " ";
 
                 var sphere = node.BoundingSphere;
-                Debug.WriteLine(indentStr1 + FormatSphere(sphere));
+                logger(indentStr1 + FormatSphere(sphere));
 
                 foreach (var item in node.Items)
-                    Debug.WriteLine(indentStr2 + FormatSphere(item));
+                    logger(indentStr2 + FormatSphere(item));
 
-                RecursivePrint(node.Left, indent + 2);
-                RecursivePrint(node.Right, indent + 2);
+                RecursivePrint(node.Left, logger, indent + 2);
+                RecursivePrint(node.Right, logger, indent + 2);
             }
         }
 

@@ -1,9 +1,11 @@
 ﻿using Comgr.CourseProject.Lib;
 using System;
 using System.Numerics;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+
 
 namespace Comgr.CourseProject.UI
 {
@@ -17,9 +19,9 @@ namespace Comgr.CourseProject.UI
             this.SizeChanged += PartAWindow_SizeChanged;
         }
 
-        private void PartAWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void PartAWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            UpdateImage();
+            await UpdateImage();
         }
 
         private void PartAWindow_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -27,11 +29,11 @@ namespace Comgr.CourseProject.UI
             // UpdateImage();
         }
 
-        private void UpdateImage()
+        private async Task UpdateImage()
         {
             // ShowGradient();
 
-            ShowCornellBox(multipleLightSources: false, coloredLight: false, lotsOfSpheres: false, proceduralTexture: false, bitmapTexture: false, pathTracing: true);
+            await ShowCornellBox(multipleLightSources: false, coloredLight: false, lotsOfSpheres: false, proceduralTexture: false, bitmapTexture: false, pathTracing: true);
         }
 
         private void ShowGradient()
@@ -42,7 +44,7 @@ namespace Comgr.CourseProject.UI
             Image.Source = gradient.GetBitmap((int)this.Width, (int)this.Height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY);
         }
 
-        private void ShowCornellBox(bool multipleLightSources, bool coloredLight, bool lotsOfSpheres, bool proceduralTexture, bool bitmapTexture, bool pathTracing)
+        private async Task ShowCornellBox(bool multipleLightSources, bool coloredLight, bool lotsOfSpheres, bool proceduralTexture, bool bitmapTexture, bool pathTracing)
         {
             var eye = new Vector3(0, 0, -4);
             var lookAt = new Vector3(0, 0, 6);
@@ -50,7 +52,18 @@ namespace Comgr.CourseProject.UI
 
             var colorBrightness = 1f;
 
-            var scene = new Scene(eye, lookAt, fieldOfView);
+            var logger = new Action<string>(async msg =>
+            {
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    Output.Text += msg + Environment.NewLine;
+
+                    Output.CaretIndex = Output.Text.Length;
+                    Output.ScrollToEnd();
+                });
+            });
+
+            var scene = new Scene(logger, eye, lookAt, fieldOfView);
             scene.Spheres.Add(new Sphere("a", new Vector3(-1001, 0, 0), 1000f, Colors.Red.ChangIntensity(colorBrightness), isWall: true));
             scene.Spheres.Add(new Sphere("b", new Vector3(1001, 0, 0), 1000f, Colors.Blue.ChangIntensity(colorBrightness), isWall: true));
             scene.Spheres.Add(new Sphere("c", new Vector3(0, 0, 1001), 1000f, Colors.White.ChangIntensity(colorBrightness), isWall: true));
@@ -114,8 +127,17 @@ namespace Comgr.CourseProject.UI
                 }
             }
 
+            var width = (int)this.Width;
+            var height = (int)this.Height;
             var dpiScale = VisualTreeHelper.GetDpi(this);
-            Image.Source = scene.GetImage((int)this.Width, (int)this.Height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY);
+
+            var imageFileName = await Task.Run(() => scene.GetImageFileName(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY));
+            Image.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(imageFileName));
+
+            await Task.Delay(TimeSpan.FromSeconds(3));
+
+            Output.Visibility = Visibility.Collapsed;
+            Image.Visibility = Visibility.Visible;
 
             // Question: Why is there a gap on the right side?
             // Question: Why are the edge of my spheres black?

@@ -1,19 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace Comgr.CourseProject.Lib
 {
     public class Scene
     {
-        private readonly Random _random = new Random(Seed: 0);
-        private readonly object _sync_random = new object();
+        private readonly ThreadLocal<Random> _threadLocalRandom = new ThreadLocal<Random>(() => new Random(Seed: 0));
+
+        private Random _random => _threadLocalRandom.Value;
 
         private const float _pdf = (1f / (2 * (float)Math.PI));
 
@@ -24,8 +27,11 @@ namespace Comgr.CourseProject.Lib
         private ICollection<LightSource> _lightSources;
         private BVHNode _accelerationStructure;
 
-        public Scene(Vector3 eye, Vector3 lookAt, float fieldOfView)
+        private readonly Action<string> _logger;
+
+        public Scene(Action<string> logger, Vector3 eye, Vector3 lookAt, float fieldOfView)
         {
+            _logger = logger;
             _eyeVector = eye;
             _lookAtVector = lookAt;
             _fieldOfView = fieldOfView;
@@ -43,13 +49,13 @@ namespace Comgr.CourseProject.Lib
 
         public bool AntiAliasing { get; set; } = false;
 
-        public int AntiAliasingSampleSize { get; set; } = 64;
+        public int AntiAliasingSampleSize { get; set; } = 16;
 
         public bool Parallelize { get; set; } = true;
 
         public bool GammaCorrect { get; set; } = false;
 
-        public bool DiffuseLambert { get; set; } = true;
+        public bool DiffuseLambert { get; set; } = false;
 
         public bool SpecularPhong { get; set; } = false;
 
@@ -59,7 +65,7 @@ namespace Comgr.CourseProject.Lib
 
         public int ReflectionBounces { get; set; } = 1;
 
-        public bool Shadows { get; set; } = true;
+        public bool Shadows { get; set; } = false;
 
         public bool SoftShadows { get; set; } = false;
 
@@ -69,9 +75,9 @@ namespace Comgr.CourseProject.Lib
 
         public bool PathTracing { get; set; } = true;
 
-        public int PathTracingRays { get; set; } = 4;
+        public int PathTracingRays { get; set; } = 256;
 
-        public int PathTracingMaxBounces { get; set; } = 5;
+        public int PathTracingMaxBounces { get; set; } = 30;
 
         public static readonly Vector3 Up = -Vector3.UnitY;
 
@@ -92,14 +98,19 @@ namespace Comgr.CourseProject.Lib
         private Vector3 uVectorNorm { get; set; }
 
         private float FOV_tan { get; set; }
+        
+        private void WriteOutput(string message)
+        {
+            _logger(message);
+        }
 
-        public ImageSource GetImage(int width, int height, double dpiX, double dpiY)
+        public string GetImageFileName(int width, int height, double dpiX, double dpiY)
         {
             var sw = Stopwatch.StartNew();
 
             if (AccelerationStructure)
             {
-                _accelerationStructure = BVHNode.BuildTopDown(_spheres);
+                _accelerationStructure = BVHNode.BuildTopDown(_spheres, _logger);
             }
 
             var bitmap = new BitmapImage(width, height, dpiX, dpiY);
@@ -124,14 +135,8 @@ namespace Comgr.CourseProject.Lib
                             Vector3 result = Vector3.Zero;
                             for (int k = 0; k < AntiAliasingSampleSize; k++)
                             {
-                                var dx = 0f;
-                                var dy = 0f;
-
-                                lock (_sync_random)
-                                {
-                                    dx = (float)_random.NextGaussian(0d, 0.5d);
-                                    dy = (float)_random.NextGaussian(0d, 0.5d);
-                                }
+                                var dx = (float)_random.NextGaussian(0d, 0.5d);
+                                var dy = (float)_random.NextGaussian(0d, 0.5d);
 
                                 var x = (i + alignX + dx) / divideX;
                                 var y = ((height - j) + alignY + dy) / divideY;
@@ -155,7 +160,10 @@ namespace Comgr.CourseProject.Lib
                         Interlocked.Increment(ref workDone);
 
                         if ((int)sw.Elapsed.TotalMilliseconds % 1000 == 0)
-                            Debug.WriteLine($"{((float)workDone / totalWork * 100):F2}% progress. Running time {sw.Elapsed}.");
+                        {
+                            var progress = (float)workDone / totalWork;
+                            WriteOutput($"{(progress * 100):F2}% progress. Remaining time {TimeSpan.FromMilliseconds(sw.Elapsed.TotalMilliseconds / progress * (1f - progress))}.");
+                        }
                     });
                 });
             }
@@ -193,20 +201,66 @@ namespace Comgr.CourseProject.Lib
                         ++workDone;
 
                         if ((int)sw.Elapsed.TotalMilliseconds % 1000 == 0)
-                            Debug.WriteLine($"{((float)workDone / totalWork * 100):F2}% progress. Running time {sw.Elapsed}.");
+                        {
+                            var progress = (float)workDone / totalWork;
+                            WriteOutput($"{(progress * 100):F2}% progress. Remaining time {TimeSpan.FromMilliseconds(sw.Elapsed.TotalMilliseconds / progress * (1f - progress))}.");
+                        }
                     }
                 }
             }
 
-            var imageSource = bitmap.GetImageSource();
+            var imageSource = bitmap.GetImageSource();           
 
             sw.Stop();
 
-            Debug.WriteLine($"Image generated in {sw.Elapsed}.");
-
-            return imageSource;
+            return SaveImage(imageSource, sw.Elapsed);
         }
                 
+        private string SaveImage(ImageSource imageSource, TimeSpan runTime)
+        {
+            var directory = @"C:\Temp\RayTracingResults";
+            var fileName = DateTime.Now.ToString("ddMMyyy_HHmmssfff");
+            var imageFileName = Path.Combine(directory, fileName + ".png");
+            var bitmap = (WriteableBitmap)imageSource;
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            
+            using (var fileStream = File.OpenWrite(imageFileName))
+            {
+                encoder.Save(fileStream);
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine();
+            sb.AppendLine($"{nameof(AntiAliasing)}: {AntiAliasing}");
+            sb.AppendLine($"{nameof(AntiAliasingSampleSize)}: {AntiAliasingSampleSize}");
+            sb.AppendLine($"{nameof(Parallelize)}: {Parallelize}");
+            sb.AppendLine($"{nameof(GammaCorrect)}: {GammaCorrect}");
+            sb.AppendLine($"{nameof(DiffuseLambert)}: {DiffuseLambert}");
+            sb.AppendLine($"{nameof(SpecularPhong)}: {SpecularPhong}");
+            sb.AppendLine($"{nameof(SpecularPhongFactor)}: {SpecularPhongFactor}");
+            sb.AppendLine($"{nameof(Reflection)}: {Reflection}");
+            sb.AppendLine($"{nameof(ReflectionBounces)}: {ReflectionBounces}");
+            sb.AppendLine($"{nameof(Shadows)}: {Shadows}");
+            sb.AppendLine($"{nameof(SoftShadows)}: {SoftShadows}");
+            sb.AppendLine($"{nameof(SoftShadowFeelers)}: {SoftShadowFeelers}");
+            sb.AppendLine($"{nameof(AccelerationStructure)}: {AccelerationStructure}");
+            sb.AppendLine($"{nameof(PathTracing)}: {PathTracing}");
+            sb.AppendLine($"{nameof(PathTracingRays)}: {PathTracingRays}");
+            sb.AppendLine($"{nameof(PathTracingMaxBounces)}: {PathTracingMaxBounces}");
+            sb.AppendLine();
+            sb.AppendLine($"Image generated in {runTime}.");
+
+            var output = sb.ToString();
+            WriteOutput(output);
+
+            var textFileName = Path.Combine(directory, fileName + ".txt");
+            File.WriteAllText(textFileName, output);
+
+            return imageFileName;
+        }
+
         public Vector3 GetColor(float x, float y)
         {
             var pixel = new Vector2(x, y);
@@ -301,10 +355,10 @@ namespace Comgr.CourseProject.Lib
                 }
                 else
                 {
-                    if (!sphere.IsEmissive)
+                    if (sphere.IsEmissive)
                     {
-                        // material *= 5;
-                        material *= 10000;
+                        material *= 500;
+                        // material *= 10000;
                     }
 
                     if (pathTracingLimit > 0)
@@ -319,19 +373,7 @@ namespace Comgr.CourseProject.Lib
                         }
                         else
                         {
-                            var russianRoulette = 0f;
-
-                            if (Parallelize)
-                            {
-                                lock (_sync_random)
-                                {
-                                    russianRoulette = (float)_random.NextDouble();
-                                }
-                            }
-                            else
-                            {
-                                russianRoulette = (float)_random.NextDouble();
-                            }
+                            var russianRoulette = (float)_random.NextDouble();
 
                             if (russianRoulette > 0.2f)
                             {
@@ -356,22 +398,8 @@ namespace Comgr.CourseProject.Lib
 
                             for (int i = 0; i < numberOfRandomRays; i++)
                             {
-                                var cosTheta = 0f;
-                                var phi = 0f;
-
-                                if (Parallelize)
-                                {
-                                    lock (_sync_random)
-                                    {
-                                        cosTheta = (float)_random.NextDouble();
-                                        phi = (float)(_random.NextDouble() * 2 * Math.PI);
-                                    }
-                                }
-                                else
-                                {
-                                    cosTheta = (float)_random.NextDouble();
-                                    phi = (float)(_random.NextDouble() * 2 * Math.PI);
-                                }
+                                var cosTheta = (float)_random.NextDouble();
+                                var phi = (float)(_random.NextDouble() * 2 * Math.PI);
 
                                 var sinTheta = (float)Math.Sqrt(1 - cosTheta * cosTheta);
                                 float x = sinTheta * (float)Math.Cos(phi);
@@ -390,11 +418,17 @@ namespace Comgr.CourseProject.Lib
                             }
 
                             indirectDiffuse /= numberOfRandomRays * _pdf;
+                            
+                            var surfaceAlbedo = 0.18f;
+                            rgb += Vector3.Multiply(indirectDiffuse, material) * (surfaceAlbedo / (float)Math.PI);
 
-                            rgb += Vector3.Multiply(indirectDiffuse, material);
+                            // rgb += Vector3.Multiply(indirectDiffuse, material);
 
-                            //var surfaceAlbedo = 0.18f;
                             //rgb += Vector3.Multiply(indirectDiffuse, material) * (surfaceAlbedo / (float)Math.PI) * (isBounced ? 1.25f : 1f); // value correction, 1 / (1 - p);
+                        }
+                        else
+                        {
+                            rgb += material;
                         }
                     }
                     else
@@ -496,22 +530,8 @@ namespace Comgr.CourseProject.Lib
             {
                 // Source: https://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/introduction-global-illumination-path-tracing
 
-                var cosTheta = 0f;
-                var phi = 0f;
-
-                if (Parallelize)
-                {
-                    lock (_sync_random)
-                    {
-                        cosTheta = (float)_random.NextDouble();
-                        phi = (float)(_random.NextDouble() * 2 * Math.PI);
-                    }
-                }
-                else
-                {
-                    cosTheta = (float)_random.NextDouble();
-                    phi = (float)(_random.NextDouble() * 2 * Math.PI);
-                }
+                var cosTheta = (float)_random.NextDouble();
+                var phi = (float)(_random.NextDouble() * 2 * Math.PI);
 
                 float x = (float)(Math.Sqrt(cosTheta) * Math.Sin(phi));
                 float y = (float)(Math.Sqrt(cosTheta) * Math.Cos(phi));
