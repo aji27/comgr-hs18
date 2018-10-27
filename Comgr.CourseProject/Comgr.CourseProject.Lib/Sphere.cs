@@ -18,18 +18,20 @@ namespace Comgr.CourseProject.Lib
         private Vector3 _rgb;
         private ITexture _texture;
         private bool _isWall;
-        private bool _isEmissive;
+        private float _brightness;
+        private float _reflectiveness;
 
-        public Sphere(string name, Vector3 center, float radius, Color color, ITexture texture = null, bool isWall = false, bool isEmissive = false)
+        public Sphere(string name, Vector3 center, float radius, Color color, ITexture texture = null, bool isWall = false, float brightness = 1f, float reflectiveness = 0.2f)
         {
             _name = name;
             _centerVector = center;
             _radius = radius;
             _color = color;
+            _brightness = brightness;
             _rgb = Conversions.FromColor(_color);
             _texture = texture;
             _isWall = isWall;
-            _isEmissive = isEmissive;
+            _reflectiveness = reflectiveness;
         }
 
         public string Name => _name;
@@ -44,7 +46,9 @@ namespace Comgr.CourseProject.Lib
 
         public bool IsWall => _isWall;
 
-        public bool IsEmissive => _isEmissive;
+        public float Brightness => _brightness;
+
+        public float Reflectiveness => _reflectiveness;
 
         public Vector3 CalcColor(Vector3 point)
         {

@@ -23,25 +23,25 @@ namespace Comgr.CourseProject.Lib
         private Vector3 _eyeVector;
         private Vector3 _lookAtVector;
         private float _fieldOfView;
-        private ICollection<Sphere> _spheres;
-        private ICollection<LightSource> _lightSources;
+        private Sphere[] _spheres;
+        private LightSource[] _lightSources;
         private BVHNode _accelerationStructure;
 
         private readonly Action<string> _logger;
 
         private readonly object _syncLogger = new object();
 
-        private readonly int WriteLogEveryXPixel = 700 * 700 / 100; // 700 width * 700 height / 100 --> alle 1% ein Log Aufruf
+        private int OutputLogEveryXPixel;
 
-        public Scene(Action<string> logger, Vector3 eye, Vector3 lookAt, float fieldOfView)
+        public Scene(Action<string> logger, Vector3 eye, Vector3 lookAt, float fieldOfView, Sphere[] spheres, LightSource[] lightSources)
         {
             _logger = logger;
             _eyeVector = eye;
             _lookAtVector = lookAt;
             _fieldOfView = fieldOfView;
 
-            _spheres = new List<Sphere>();
-            _lightSources = new List<LightSource>();
+            _spheres = spheres;
+            _lightSources = lightSources;
 
             fVectorNorm = Vector3.Normalize(LookAt - Eye);
             rVectorNorm = Vector3.Normalize(Vector3.Cross(fVectorNorm, Up));
@@ -91,10 +91,6 @@ namespace Comgr.CourseProject.Lib
 
         public float FieldOfView => _fieldOfView;
 
-        public ICollection<Sphere> Spheres => _spheres;
-
-        public ICollection<LightSource> LightSources => _lightSources;
-
         private Vector3 fVectorNorm { get; set; }
 
         private Vector3 rVectorNorm { get; set; }
@@ -108,9 +104,11 @@ namespace Comgr.CourseProject.Lib
             _logger(message);
         }
 
-        public string GetImageFileName(int width, int height, double dpiX, double dpiY, CancellationToken cancellationToken)
+        public string GetImageFileName(int width, int height, double dpiX, double dpiY, CancellationToken cancellationToken, string settingsSummary, string exportDirectory)
         {
             var sw = Stopwatch.StartNew();
+
+            OutputLogEveryXPixel = (width * height / 100);
 
             if (AccelerationStructure)
             {
@@ -134,9 +132,6 @@ namespace Comgr.CourseProject.Lib
 
                 Parallel.For(0, width, options, i =>
                 {
-                    //Parallel.For(0, height, j =>
-                    //{
-
                     for (int j = 0; j < height; j++)
                     {
                         if (cancellationToken.IsCancellationRequested)
@@ -171,16 +166,12 @@ namespace Comgr.CourseProject.Lib
 
                         var value = Interlocked.Increment(ref workDone);
 
-                        if (value % WriteLogEveryXPixel == 0)
+                        if (value % OutputLogEveryXPixel == 0)
                         {
                             var progress = (float)value / totalWork;
                             WriteOutput($"{(progress * 100):F3}% progress. Running {sw.Elapsed}. Remaining {TimeSpan.FromMilliseconds(sw.Elapsed.TotalMilliseconds / progress * (1f - progress))}.");
                         }
                     }
-
-                    //});
-
-                    //WriteOutput($"Rendering column {i} of {width}");
                 });
             }
             else
@@ -222,7 +213,7 @@ namespace Comgr.CourseProject.Lib
 
                         ++workDone;
 
-                        if (workDone % WriteLogEveryXPixel == 0)
+                        if (workDone % OutputLogEveryXPixel == 0)
                         {
                             var progress = (float)workDone / totalWork;
                             WriteOutput($"{(progress * 100):F3}% progress. Running {sw.Elapsed}. Remaining {TimeSpan.FromMilliseconds(sw.Elapsed.TotalMilliseconds / progress * (1f - progress))}.");
@@ -241,14 +232,16 @@ namespace Comgr.CourseProject.Lib
 
             sw.Stop();
 
-            return SaveImage(imageSource, sw.Elapsed);
+            return SaveImage(imageSource, sw.Elapsed, settingsSummary, exportDirectory);
         }
                 
-        private string SaveImage(ImageSource imageSource, TimeSpan runTime)
+        private string SaveImage(ImageSource imageSource, TimeSpan runTime, string settingsSummary, string exportDirectory)
         {
-            var directory = @"C:\Temp\RayTracingResults";
+            if (!Directory.Exists(exportDirectory))
+                Directory.CreateDirectory(exportDirectory);
+
             var fileName = DateTime.Now.ToString("ddMMyyy_HHmmssfff");
-            var imageFileName = Path.Combine(directory, fileName + ".png");
+            var imageFileName = Path.Combine(exportDirectory, fileName + ".png");
             var bitmap = (WriteableBitmap)imageSource;
 
             var encoder = new PngBitmapEncoder();
@@ -260,30 +253,13 @@ namespace Comgr.CourseProject.Lib
             }
 
             var sb = new StringBuilder();
-            sb.AppendLine();
-            sb.AppendLine($"{nameof(AntiAliasing)}: {AntiAliasing}");
-            sb.AppendLine($"{nameof(AntiAliasingSampleSize)}: {AntiAliasingSampleSize}");
-            sb.AppendLine($"{nameof(Parallelize)}: {Parallelize}");
-            sb.AppendLine($"{nameof(GammaCorrect)}: {GammaCorrect}");
-            sb.AppendLine($"{nameof(DiffuseLambert)}: {DiffuseLambert}");
-            sb.AppendLine($"{nameof(SpecularPhong)}: {SpecularPhong}");
-            sb.AppendLine($"{nameof(SpecularPhongFactor)}: {SpecularPhongFactor}");
-            sb.AppendLine($"{nameof(Reflection)}: {Reflection}");
-            sb.AppendLine($"{nameof(ReflectionBounces)}: {ReflectionBounces}");
-            sb.AppendLine($"{nameof(Shadows)}: {Shadows}");
-            sb.AppendLine($"{nameof(SoftShadows)}: {SoftShadows}");
-            sb.AppendLine($"{nameof(SoftShadowFeelers)}: {SoftShadowFeelers}");
-            sb.AppendLine($"{nameof(AccelerationStructure)}: {AccelerationStructure}");
-            sb.AppendLine($"{nameof(PathTracing)}: {PathTracing}");
-            sb.AppendLine($"{nameof(PathTracingRays)}: {PathTracingRays}");
-            sb.AppendLine($"{nameof(PathTracingMaxBounces)}: {PathTracingMaxBounces}");
-            sb.AppendLine();
-            sb.AppendLine($"Image generated in {runTime}.");
+            sb.AppendLine(settingsSummary);
+            sb.AppendLine($"Image generated in {runTime} and saved as '{imageFileName}'.");
 
             var output = sb.ToString();
             WriteOutput(output);
 
-            var textFileName = Path.Combine(directory, fileName + ".txt");
+            var textFileName = Path.Combine(exportDirectory, fileName + ".txt");
             File.WriteAllText(textFileName, output);
 
             return imageFileName;
@@ -315,6 +291,9 @@ namespace Comgr.CourseProject.Lib
 
                 if (!PathTracing)
                 {
+                    if (sphere.Brightness > 0)
+                        rgb += material * sphere.Brightness;
+
                     if (Reflection)
                     {
                         // Reflection
@@ -332,8 +311,10 @@ namespace Comgr.CourseProject.Lib
                         }
                     }
 
-                    foreach (var lightSource in LightSources)
+                    for (int i = 0; i < _lightSources.Length; i++)
                     {
+                        var lightSource = _lightSources[i];
+
                         var lVec = lightSource.Center - hitPointVec;
                         var lVecNorm = Vector3.Normalize(lVec);
 
@@ -383,12 +364,6 @@ namespace Comgr.CourseProject.Lib
                 }
                 else
                 {
-                    if (sphere.IsEmissive)
-                    {
-                        material *= 500;
-                        // material *= 10000;
-                    }
-
                     if (pathTracingLimit > 0)
                     {
                         var numberOfRandomRays = 0;
@@ -447,21 +422,16 @@ namespace Comgr.CourseProject.Lib
 
                             indirectDiffuse /= numberOfRandomRays * _pdf;
                             
-                            var surfaceAlbedo = 0.18f;
-                            rgb += Vector3.Multiply(indirectDiffuse, material) * (surfaceAlbedo / (float)Math.PI);
-
-                            // rgb += Vector3.Multiply(indirectDiffuse, material);
-
-                            //rgb += Vector3.Multiply(indirectDiffuse, material) * (surfaceAlbedo / (float)Math.PI) * (isBounced ? 1.25f : 1f); // value correction, 1 / (1 - p);
+                            rgb += Vector3.Multiply(indirectDiffuse, material) * sphere.Reflectiveness;
                         }
                         else
                         {
-                            rgb += material;
+                            rgb += material * sphere.Brightness;
                         }
                     }
                     else
                     {
-                        rgb += material;
+                        rgb += material * sphere.Brightness;
                     }
                 }
             }
@@ -487,7 +457,7 @@ namespace Comgr.CourseProject.Lib
             {
                 var current = queue.Dequeue();
 
-                if (current.Items.Count > 0)
+                if (current.Items.Length > 0)
                 {
                     foreach (var item in current.Items)
                     {
@@ -534,8 +504,9 @@ namespace Comgr.CourseProject.Lib
             }
             else
             {
-                foreach (var sphere in Spheres)
+                for (int i = 0; i < _spheres.Length; i++)
                 {
+                    var sphere = _spheres[i];
                     var hitPoint = FindHitpoint(ray, sphere);
 
                     if (hitPoint != null)
@@ -595,8 +566,9 @@ namespace Comgr.CourseProject.Lib
             }
             else
             {
-                foreach (var sphere in Spheres)
+                for (int i = 0; i < _spheres.Length; i++)                
                 {
+                    var sphere = _spheres[i];
                     var hitPoint = FindHitpoint(ray, sphere);
 
                     if (hitPoint != null)

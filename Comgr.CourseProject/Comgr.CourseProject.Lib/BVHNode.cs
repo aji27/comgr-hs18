@@ -12,7 +12,7 @@ namespace Comgr.CourseProject.Lib
     {
         public const int MinPartitionSize = 2;
 
-        private List<Sphere> _items;
+        private Sphere[] _items;
         private Sphere _boundingSphere;
 
         public BVHNode(Sphere[] spheres)
@@ -21,28 +21,27 @@ namespace Comgr.CourseProject.Lib
                 || spheres.Length == 0)
                 throw new ArgumentNullException(nameof(spheres));
 
-            _items = new List<Sphere>(spheres);
-
+            _items = spheres;
             _boundingSphere = CalculateBoundingSphere(spheres);
         }
-
-        public int Size => _items.Count;
-
+                
         public BVHNode Left { get; set; }
 
         public BVHNode Right { get; set; }
 
-        public IList<Sphere> Items => _items;
+        public Sphere[] Items => _items;
 
         public Sphere BoundingSphere => _boundingSphere;
-        
-        private Sphere CalculateBoundingSphere(IList<Sphere> spheres)
+
+        public void ClearItems() => _items = null;
+
+        private Sphere CalculateBoundingSphere(Sphere[] spheres)
         {
-            if (spheres.Count == 1)
+            if (spheres.Length == 1)
             {
                 return new Sphere($"Bounding Sphere", spheres[0].Center, spheres[0].Radius, Colors.Transparent);
             }
-            else if (spheres.Count > 1)
+            else if (spheres.Length > 1)
             {
                 Vector3 min = Vector3.Zero;
                 var minLength = float.MaxValue;
@@ -125,7 +124,7 @@ namespace Comgr.CourseProject.Lib
 
                 current = queue.Dequeue();
 
-                if (current.Items.Count > MinPartitionSize)
+                if (current.Items.Length > MinPartitionSize)
                 {
                     var boundingSphere = current.BoundingSphere;
                     var splitOrder = GetSplitOrder(boundingSphere.Center);
@@ -157,7 +156,7 @@ namespace Comgr.CourseProject.Lib
                             current.Right = new BVHNode(rightSpheres.ToArray());
                             queue.Enqueue(current.Right);
 
-                            current.Items.Clear();
+                            current.ClearItems();
 
                             break;
                         }
