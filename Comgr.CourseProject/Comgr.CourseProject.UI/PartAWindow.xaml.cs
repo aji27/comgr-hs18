@@ -1,6 +1,7 @@
 ﻿using Comgr.CourseProject.Lib;
 using System;
 using System.Numerics;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,31 +12,45 @@ namespace Comgr.CourseProject.UI
 {
     public partial class PartAWindow : Window
     {
+        private CancellationTokenSource _cts;
+
         public PartAWindow()
         {
             InitializeComponent();
 
-            this.Loaded += PartAWindow_Loaded;
-            this.SizeChanged += PartAWindow_SizeChanged;
+            Start.Click += Start_Click;
+            Cancel.Click += Cancel_Click;
         }
 
-        private async void PartAWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void Start_Click(object sender, RoutedEventArgs e)
         {
-            await UpdateImage();
+            if (_cts == null)
+            {
+                try
+                {
+                    await ShowCornellBox(multipleLightSources: false, coloredLight: false, lotsOfSpheres: false, proceduralTexture: false, bitmapTexture: false, pathTracing: true);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.ToString());
+                }
+                finally
+                {
+                    _cts = null;
+                    Status.Text = "Status: Ready";
+                    SetControlsEnabled(true);
+                }
+            }
         }
 
-        private void PartAWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void Cancel_Click(object sender, RoutedEventArgs e)
         {
-            // UpdateImage();
+            if (_cts != null)
+            {
+                _cts.Cancel();
+            }
         }
-
-        private async Task UpdateImage()
-        {
-            // ShowGradient();
-
-            await ShowCornellBox(multipleLightSources: false, coloredLight: false, lotsOfSpheres: false, proceduralTexture: false, bitmapTexture: false, pathTracing: true);
-        }
-
+        
         private void ShowGradient()
         {
             // ** Gradient Green to Red **
@@ -52,15 +67,15 @@ namespace Comgr.CourseProject.UI
 
             var colorBrightness = 1f;
 
-            var logger = new Action<string>(async msg =>
+            var logger = new Action<string>(msg =>
             {
-                await Dispatcher.InvokeAsync(() =>
+                Dispatcher.InvokeAsync(() =>
                 {
                     Output.Text += msg + Environment.NewLine;
 
                     Output.CaretIndex = Output.Text.Length;
                     Output.ScrollToEnd();
-                });
+                }, System.Windows.Threading.DispatcherPriority.Background);
             });
 
             var scene = new Scene(logger, eye, lookAt, fieldOfView);
@@ -127,23 +142,70 @@ namespace Comgr.CourseProject.UI
                 }
             }
 
-            var width = (int)this.Width;
-            var height = (int)this.Height;
+            SetControlsEnabled(false);
+
+            scene.AntiAliasing = bool.Parse(AntiAliasing.Text);
+            scene.AntiAliasingSampleSize = int.Parse(AntiAliasingSampleSize.Text);
+            scene.Parallelize = bool.Parse(Parallelize.Text);
+            scene.GammaCorrect = bool.Parse(GammaCorrect.Text);
+            scene.DiffuseLambert = bool.Parse(DiffuseLambert.Text);
+            scene.SpecularPhong = bool.Parse(SpecularPhong.Text);
+            scene.SpecularPhongFactor = int.Parse(SpecularPhongFactor.Text);
+            scene.Reflection = bool.Parse(Reflection.Text);
+            scene.ReflectionBounces = int.Parse(ReflectionBounces.Text);
+            scene.Shadows = bool.Parse(Shadows.Text);
+            scene.SoftShadows = bool.Parse(SoftShadows.Text);
+            scene.SoftShadowFeelers = int.Parse(SoftShadowFeelers.Text);
+            scene.AccelerationStructure = bool.Parse(AccelerationStructure.Text);
+            scene.PathTracing = bool.Parse(PathTracing.Text);
+            scene.PathTracingRays = int.Parse(PathTracingRays.Text);
+            scene.PathTracingMaxBounces = int.Parse(PathTracingMaxBounces.Text);
+
+            Image.Source = null;
+            Output.Text = "";
+            Status.Text = "Status: Running";
+            
+            var width = 600;
+            var height = 600;
             var dpiScale = VisualTreeHelper.GetDpi(this);
 
-            var imageFileName = await Task.Run(() => scene.GetImageFileName(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY));
-            Image.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(imageFileName));
+            _cts = new CancellationTokenSource();
 
-            await Task.Delay(TimeSpan.FromSeconds(3));
+            var imageFileName = await Task.Factory.StartNew(() => scene.GetImageFileName(width, height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY, _cts.Token), TaskCreationOptions.LongRunning);
+            if (!string.IsNullOrEmpty(imageFileName))
+            {
+                Image.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(imageFileName));
+            }
+            
+            SetControlsEnabled(true);
 
-            Output.Visibility = Visibility.Collapsed;
-            Image.Visibility = Visibility.Visible;
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
             // Question: Why is there a gap on the right side?
             // Question: Why are the edge of my spheres black?
             // Question: Why do my reflections have more depth?
             // Question: You didn't gamma correct in your examples? 
             // Question: Some shadows are not overlapped? Why is that? For e.g. right down corner?
+        }
+
+        private void SetControlsEnabled(bool enabled)
+        {
+            AntiAliasing.IsEnabled = enabled;
+            AntiAliasingSampleSize.IsEnabled = enabled;
+            Parallelize.IsEnabled = enabled;
+            GammaCorrect.IsEnabled = enabled;
+            DiffuseLambert.IsEnabled = enabled;
+            SpecularPhong.IsEnabled = enabled;
+            SpecularPhongFactor.IsEnabled = enabled;
+            Reflection.IsEnabled = enabled;
+            ReflectionBounces.IsEnabled = enabled;
+            Shadows.IsEnabled = enabled;
+            SoftShadows.IsEnabled = enabled;
+            SoftShadowFeelers.IsEnabled = enabled;
+            AccelerationStructure.IsEnabled = enabled;
+            PathTracing.IsEnabled = enabled;
+            PathTracingRays.IsEnabled = enabled;
+            PathTracingMaxBounces.IsEnabled = enabled;
         }
     }
 

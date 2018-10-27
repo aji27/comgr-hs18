@@ -29,6 +29,10 @@ namespace Comgr.CourseProject.Lib
 
         private readonly Action<string> _logger;
 
+        private readonly object _syncLogger = new object();
+
+        private readonly int WriteLogEveryXPixel = 700 * 700 / 100; // 700 width * 700 height / 100 --> alle 1% ein Log Aufruf
+
         public Scene(Action<string> logger, Vector3 eye, Vector3 lookAt, float fieldOfView)
         {
             _logger = logger;
@@ -75,7 +79,7 @@ namespace Comgr.CourseProject.Lib
 
         public bool PathTracing { get; set; } = true;
 
-        public int PathTracingRays { get; set; } = 256;
+        public int PathTracingRays { get; set; } = 1024;
 
         public int PathTracingMaxBounces { get; set; } = 30;
 
@@ -104,7 +108,7 @@ namespace Comgr.CourseProject.Lib
             _logger(message);
         }
 
-        public string GetImageFileName(int width, int height, double dpiX, double dpiY)
+        public string GetImageFileName(int width, int height, double dpiX, double dpiY, CancellationToken cancellationToken)
         {
             var sw = Stopwatch.StartNew();
 
@@ -126,10 +130,18 @@ namespace Comgr.CourseProject.Lib
 
             if (Parallelize)
             {
-                Parallel.For(0, width, i =>
+                var options = new ParallelOptions() { CancellationToken = cancellationToken, MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+                Parallel.For(0, width, options, i =>
                 {
-                    Parallel.For(0, height, j =>
+                    //Parallel.For(0, height, j =>
+                    //{
+
+                    for (int j = 0; j < height; j++)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                            break;
+
                         if (AntiAliasing)
                         {
                             Vector3 result = Vector3.Zero;
@@ -157,22 +169,32 @@ namespace Comgr.CourseProject.Lib
                             bitmap.Set(i, j, c);
                         }
 
-                        Interlocked.Increment(ref workDone);
+                        var value = Interlocked.Increment(ref workDone);
 
-                        if ((int)sw.Elapsed.TotalMilliseconds % 1000 == 0)
+                        if (value % WriteLogEveryXPixel == 0)
                         {
-                            var progress = (float)workDone / totalWork;
-                            WriteOutput($"{(progress * 100):F2}% progress. Remaining time {TimeSpan.FromMilliseconds(sw.Elapsed.TotalMilliseconds / progress * (1f - progress))}.");
+                            var progress = (float)value / totalWork;
+                            WriteOutput($"{(progress * 100):F3}% progress. Running {sw.Elapsed}. Remaining {TimeSpan.FromMilliseconds(sw.Elapsed.TotalMilliseconds / progress * (1f - progress))}.");
                         }
-                    });
+                    }
+
+                    //});
+
+                    //WriteOutput($"Rendering column {i} of {width}");
                 });
             }
             else
             {
                 for (int i = 0; i < width; i++)
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+
                     for (int j = 0; j < height; j++)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                            break;
+
                         if (AntiAliasing)
                         {
                             Vector3 result = Vector3.Zero;
@@ -200,13 +222,19 @@ namespace Comgr.CourseProject.Lib
 
                         ++workDone;
 
-                        if ((int)sw.Elapsed.TotalMilliseconds % 1000 == 0)
+                        if (workDone % WriteLogEveryXPixel == 0)
                         {
                             var progress = (float)workDone / totalWork;
-                            WriteOutput($"{(progress * 100):F2}% progress. Remaining time {TimeSpan.FromMilliseconds(sw.Elapsed.TotalMilliseconds / progress * (1f - progress))}.");
+                            WriteOutput($"{(progress * 100):F3}% progress. Running {sw.Elapsed}. Remaining {TimeSpan.FromMilliseconds(sw.Elapsed.TotalMilliseconds / progress * (1f - progress))}.");
                         }
                     }
                 }
+            }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                WriteOutput("Operation canceled by user.");
+                return null;
             }
 
             var imageSource = bitmap.GetImageSource();           

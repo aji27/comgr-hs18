@@ -5,9 +5,60 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Comgr.CourseProject.UI"
         mc:Ignorable="d"
-        Title="comgr - HS18 - course project - Ajanth Kandasamy" Height="700" Width="700">
-    <Grid x:Name="LayoutRoot">
-        <TextBox x:Name="Output" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
-        <Image x:Name="Image" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" />
+        Title="comgr - HS18 - course project - Ajanth Kandasamy" Height="1024" Width="1024">
+    <Grid x:Name="LayoutRoot" Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" Margin="0,0,0,15">
+            <TextBlock Text="AntiAliasing" Margin="0,5,0,0"/>
+            <TextBox x:Name="AntiAliasing" Text="False" />
+            <TextBlock Text="AntiAliasingSampleSize" Margin="0,5,0,0"/>
+            <TextBox x:Name="AntiAliasingSampleSize" Text="4" />
+            <TextBlock Text="Parallelize" Margin="0,5,0,0"/>
+            <TextBox x:Name="Parallelize" Text="True" />
+            <TextBlock Text="GammaCorrect" Margin="0,5,0,0"/>
+            <TextBox x:Name="GammaCorrect" Text="True" />
+            <TextBlock Text="DiffuseLambert" Margin="0,5,0,0"/>
+            <TextBox x:Name="DiffuseLambert" Text="False" />
+            <TextBlock Text="SpecularPhong" Margin="0,5,0,0"/>
+            <TextBox x:Name="SpecularPhong" Text="False" />
+            <TextBlock Text="SpecularPhongFactor" Margin="0,5,0,0"/>
+            <TextBox x:Name="SpecularPhongFactor" Text="1000" />
+            <TextBlock Text="Reflection" Margin="0,5,0,0"/>
+            <TextBox x:Name="Reflection" Text="False" />
+            <TextBlock Text="ReflectionBounces" Margin="0,5,0,0"/>
+            <TextBox x:Name="ReflectionBounces" Text="1" />
+            <TextBlock Text="Shadows" Margin="0,5,0,0"/>
+            <TextBox x:Name="Shadows" Text="False" />
+            <TextBlock Text="SoftShadows" Margin="0,5,0,0"/>
+            <TextBox x:Name="SoftShadows" Text="False" />
+            <TextBlock Text="SoftShadowFeelers" Margin="0,5,0,0"/>
+            <TextBox x:Name="SoftShadowFeelers" Text="8" />
+            <TextBlock Text="AccelerationStructure" Margin="0,5,0,0"/>
+            <TextBox x:Name="AccelerationStructure" Text="False" />
+            <TextBlock Text="PathTracing" Margin="0,5,0,0"/>
+            <TextBox x:Name="PathTracing" Text="True" />
+            <TextBlock Text="PathTracingRays" Margin="0,5,0,0"/>
+            <TextBox x:Name="PathTracingRays" Text="1024" />
+            <TextBlock Text="PathTracingMaxBounces" Margin="0,5,0,0"/>
+            <TextBox x:Name="PathTracingMaxBounces" Text="2147483647" />
+            <StackPanel Margin="0,15,0,0" Orientation="Horizontal">
+                <TextBlock x:Name="Status" Text="Status: Ready" Margin="0,0,15,0"  VerticalAlignment="Center" />
+                <Button x:Name="Start" Content="Start" Margin="0,0,5,0" />
+                <Button x:Name="Cancel" Content="Cancel"/>
+            </StackPanel>
+        </StackPanel>
+
+        <Border Grid.Row="0" Grid.Column="1" Margin="20, 0, 0, 20" BorderThickness="1" BorderBrush="Black">
+            <Image x:Name="Image" Margin="5" Width="640" Height="640" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+
+        <TextBox x:Name="Output" Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsReadOnly="True" TextWrapping="Wrap"  />
     </Grid>
 </Window>
