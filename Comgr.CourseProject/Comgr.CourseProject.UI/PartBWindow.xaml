@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Comgr.CourseProject.UI"
         mc:Ignorable="d"
-        Title="PartBWindow" Height="600" Width="800">
-    <Grid>
-        <Canvas x:Name="Canvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+        Title="PartBWindow" Height="640" Width="640">
+    <Grid Margin="20">
+        <Image x:Name="Image" Width="600" Height="600" />
     </Grid>
 </Window>

@@ -53,11 +53,14 @@
     <Compile Include="HitPoint.cs" />
     <Compile Include="LightSource.cs" />
     <Compile Include="ITexture.cs" />
+    <Compile Include="Matrix2x2.cs" />
     <Compile Include="RandomExtensions.cs" />
     <Compile Include="Ray.cs" />
+    <Compile Include="SceneB.cs" />
     <Compile Include="Sphere.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Scene.cs" />
+    <Compile Include="SceneA.cs" />
+    <Compile Include="Triangle.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

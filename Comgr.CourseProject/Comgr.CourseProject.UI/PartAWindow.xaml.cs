@@ -162,7 +162,7 @@ namespace Comgr.CourseProject.UI
 
             SetControlsEnabled(false);
                         
-            var scene = new Scene(logger, eye, lookAt, fieldOfView, spheres.ToArray(), lightSources.ToArray());
+            var scene = new SceneA(logger, eye, lookAt, fieldOfView, spheres.ToArray(), lightSources.ToArray());
 
             scene.AntiAliasing = bool.Parse(AntiAliasing.Text);
             scene.AntiAliasingSampleSize = int.Parse(AntiAliasingSampleSize.Text);

@@ -12,7 +12,7 @@ using System.Windows.Media.Imaging;
 
 namespace Comgr.CourseProject.Lib
 {
-    public class Scene
+    public class SceneA
     {
         private readonly ThreadLocal<Random> _threadLocalRandom = new ThreadLocal<Random>(() => new Random(Seed: 0));
 
@@ -33,7 +33,7 @@ namespace Comgr.CourseProject.Lib
 
         private int OutputLogEveryXPixel;
 
-        public Scene(Action<string> logger, Vector3 eye, Vector3 lookAt, float fieldOfView, Sphere[] spheres, LightSource[] lightSources)
+        public SceneA(Action<string> logger, Vector3 eye, Vector3 lookAt, float fieldOfView, Sphere[] spheres, LightSource[] lightSources)
         {
             _logger = logger;
             _eyeVector = eye;
@@ -436,7 +436,6 @@ namespace Comgr.CourseProject.Lib
                 }
             }
         
-
             return rgb;
         }
 
