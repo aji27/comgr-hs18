@@ -34,8 +34,8 @@ namespace Comgr.CourseProject.Lib
 
         public static Vector2 operator *(Matrix2x2 m, Vector2 v)
         {
-            var x = m.X1 * v.X + m.X2 + v.X;
-            var y = m.Y1 * v.Y + m.Y2 * v.Y;
+            var x = m.X1 * v.X + m.X2 * v.Y;
+            var y = m.Y1 * v.X + m.Y2 * v.Y;
 
             return new Vector2(x, y);
         }
