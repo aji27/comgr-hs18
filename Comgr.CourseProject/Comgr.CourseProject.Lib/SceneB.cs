@@ -33,12 +33,15 @@ namespace Comgr.CourseProject.Lib
             {
                 var triangle = _triangles[i];
                 var triangle2D = triangle.TransformAndProject(Transformation, _width, _height);
-
-                for (int x = (int)triangle2D.MinX; x <= (int)triangle2D.MaxX; x++)
+                
+                if (!triangle2D.IsBackface)
                 {
-                    for (int y = (int)triangle2D.MinY; y <= (int)triangle2D.MaxY; y++)
+                    for (int x = (int)triangle2D.MinX; x <= (int)triangle2D.MaxX; x++)
                     {
-                        _rgbArray[x, y] += triangle2D.CalcColor(x, y);
+                        for (int y = (int)triangle2D.MinY; y <= (int)triangle2D.MaxY; y++)
+                        {
+                            _rgbArray[x, y] += triangle2D.CalcColor(x, y);
+                        }
                     }
                 }
             }
