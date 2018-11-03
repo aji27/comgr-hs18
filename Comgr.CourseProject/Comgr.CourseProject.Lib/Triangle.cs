@@ -1,44 +1,43 @@
-﻿using System.Numerics;
-using System.Windows.Media;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Comgr.CourseProject.Lib
 {
     public class Triangle
     {
-        private Vector2 _a;
-        private Vector2 _b;
-        private Vector2 _c;
+        private Vector3 _a;
+        private Vector3 _b;
+        private Vector3 _c;
 
-        private Matrix2x2 _inverse;
-        
-        public Triangle(Vector2 a, Vector2 b, Vector2 c)
+        public Triangle(Vector3 a, Vector3 b, Vector3 c)
         {
             _a = a;
             _b = b;
             _c = c;
-
-            var AB = _b - _a;
-            var AC = _c - _a;
-
-            var A = new Matrix2x2(AB.X, AB.Y, AC.X, AC.Y);
-            _inverse = A.Inverse();                        
         }
 
-        public Vector3 CalcColor(float x, float y)
+        public Triangle2D TransformAndProject(Matrix4x4 transform, float width, float height)
         {
-            var p = new Vector2(x, y);
-            var AP = p - _a;
-            var vec = _inverse * AP;
-            var u = vec.X;
-            var v = vec.Y;
-            bool drawPoint = (u >= 0 && v >= 0 && (u + v) < 1);
+            var a2 = TransformAndProject(_a, transform, width, height);
+            var b2 = TransformAndProject(_b, transform, width, height);
+            var c2 = TransformAndProject(_c, transform, width, height);
 
-            if (drawPoint)
-            {
-                return Conversions.FromColor(Colors.LightSkyBlue);
-            }
+            return new Triangle2D(a2, b2, c2);
+        }
 
-            return Vector3.Zero;
-        }        
+        private Vector2 TransformAndProject(Vector3 v, Matrix4x4 transform, float width, float height)
+        {
+            var v_homogenous = new Vector4(v, w: 1);
+            var v_transformed = Vector4.Transform(v_homogenous, transform);
+
+            var x = width * v_transformed.X / v_transformed.Z + width / 2;
+            var y = width * v_transformed.Y / v_transformed.Z + height / 2;
+
+            return new Vector2(x, y);
+        }
     }
 }

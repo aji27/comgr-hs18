@@ -25,29 +25,67 @@ namespace Comgr.CourseProject.UI
         public PartBWindow()
         {
             InitializeComponent();
+            this.Loaded += PartBWindow_Loaded;
+        }
+
+        private void PartBWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            _width = Image.Width;
+            _height = Image.Height;
+
+            var dpiScale = VisualTreeHelper.GetDpi(this);
+            _pixelsPerInchX = dpiScale.PixelsPerInchX;
+            _pixelsPerInchY = dpiScale.PixelsPerInchY;
+
+            var triangles = GetTriangles((float)_width, (float)_height);
+            _scene = new SceneB(triangles, (int)_width, (int)_height, _pixelsPerInchX, _pixelsPerInchY);
+
+            _sw = Stopwatch.StartNew();
             CompositionTarget.Rendering += CompositionTarget_Rendering;
         }
 
-        private readonly Stopwatch _sw = Stopwatch.StartNew();
+        private double _width;
+        private double _height;
+        private double _pixelsPerInchX;
+        private double _pixelsPerInchY;
+
+        private SceneB _scene;
+
+        private Stopwatch _sw;
+        private int _rotationInDegrees = 0;
 
         private void CompositionTarget_Rendering(object sender, EventArgs e)
         {
-            if (_sw.Elapsed.Seconds > 1)
+            if (_sw.Elapsed.TotalMilliseconds >= 0)
             {
-                var width = Image.Width;
-                var height = Image.Height;
-                var dpiScale = VisualTreeHelper.GetDpi(this);
+                _rotationInDegrees += 5;
+                if (_rotationInDegrees > 360)
+                    _rotationInDegrees = 0;
 
-                var triangles = GetTriangles((float)width, (float)height);
-                var scene = new SceneB(triangles);
+                var transformation = Matrix4x4.Identity;
+                transformation *= RotateXYZ(_rotationInDegrees);
+                transformation *= Matrix4x4.CreateTranslation(0, 0, 5);
 
-                Image.Source = scene.GetImage((int)width, (int)height, dpiScale.PixelsPerInchX, dpiScale.PixelsPerInchY);
+                _scene.Transformation = transformation;
+
+                Image.Source = _scene.GetImage();
 
                 _sw.Restart();
             }
         }
 
-        DateTime start = DateTime.Now;
+        private static float DegreesToRadians(float degree) => (float)(Math.PI / 180) * degree;
+
+        public Matrix4x4 RotateXYZ(float angleInDegrees)
+        {
+            var radians = DegreesToRadians(angleInDegrees);
+            var transform =
+            Matrix4x4.CreateRotationX(radians)
+            * Matrix4x4.CreateRotationY(radians)
+            * Matrix4x4.CreateRotationZ(radians);
+
+            return transform;
+        }
 
         private Triangle[] GetTriangles(float width, float height)
         {
@@ -90,131 +128,16 @@ namespace Comgr.CourseProject.UI
                 (1, 4, 5),
             };
 
-            var translate = new Vector3(0, 0, 5 + (float)Math.Cos((DateTime.Now - start).TotalSeconds));
-            //var translate = new Vector3(0, 0, 5);
-
             foreach (var t in triangleIdx)
             {
-                var v1 = points[t.Item1] + translate;
-                var x1 = width * v1.X / v1.Z + width / 2;
-                var y1 = width * v1.Y / v1.Z + height / 2;
-                var p1 = new Vector2(x1, y1);                                
+                var v1 = points[t.Item1];
+                var v2 = points[t.Item2];
+                var v3 = points[t.Item3];
 
-                var v2 = points[t.Item2] + translate;
-                var x2 = width * v2.X / v2.Z + width / 2;
-                var y2 = width * v2.Y / v2.Z + height / 2;
-                var p2 = new Vector2(x2, y2);
-                
-                var v3 = points[t.Item3] + translate;
-                var x3 = width * v3.X / v3.Z + width / 2;
-                var y3 = width * v3.Y / v3.Z + height / 2;
-                var p3 = new Vector2(x3, y3);
-
-                triangles.Add(new Triangle(p1, p2, p3));
+                triangles.Add(new Triangle(v1, v2, v3));
             }
 
             return triangles.ToArray();
         }
-
-        //private void DrawWireframeCube()
-        //{
-        //    var width = this.Width;
-        //    var height = this.Height;
-
-        //    Canvas.Children.Clear();
-
-        //    var points = new Vector3[]
-        //    {
-        //        // top
-        //        new Vector3(-1, -1, -1),
-        //        new Vector3(+1, -1, -1),
-        //        new Vector3(+1, +1, -1),
-        //        new Vector3(-1, +1, -1),
-
-        //        //bottom                
-        //        new Vector3(-1, -1, +1),
-        //        new Vector3(+1, -1, +1),
-        //        new Vector3(+1, +1, +1),
-        //        new Vector3(-1, +1, +1)
-        //    };
-            
-
-        //    var triangleIdx = new List<(int, int, int)>
-        //    {
-        //        (0, 1, 2), // top
-        //        (0, 2, 3),
-
-        //        (7, 6, 5), // bottom
-        //        (7, 5, 4),
-                
-        //        (0, 3, 7), // left
-        //        (0, 7, 4),
-                
-        //        (2, 1, 5), // right                
-        //        (2, 5, 6),
-                
-        //        (3, 2, 6), // front
-        //        (3, 6, 7),
-                
-        //        (1, 0, 4), // back                
-        //        (1, 4, 5),
-        //    };
-
-        //    var translate = new Vector3(0, 0, 5+(float)Math.Cos((DateTime.Now-start).TotalSeconds));
-        //    //var translate = new Vector3(0, 0, 5);
-
-        //    foreach (var t in triangleIdx)
-        //    {
-        //        var p = new Polygon();
-        //        p.Stroke = Brushes.Black;
-
-        //        var v1 = points[t.Item1] + translate;
-        //        var x1 = width * v1.X / v1.Z + width / 2;
-        //        var y1 = width * v1.Y / v1.Z + height / 2;
-        //        var p1 = new Point(x1, y1);
-
-        //        p.Points.Add(p1);
-
-        //        var v2 = points[t.Item2] + translate;
-        //        var x2 = width * v2.X / v2.Z + width / 2;
-        //        var y2 = width * v2.Y / v2.Z + height / 2;
-        //        var p2 = new Point(x2, y2);
-                
-        //        p.Points.Add(p2);
-
-        //        var v3 = points[t.Item3] + translate;
-        //        var x3 = width * v3.X / v3.Z + width / 2;
-        //        var y3 = width * v3.Y / v3.Z + height / 2;
-        //        var p3 = new Point(x3, y3);
-
-        //        p.Points.Add(p3);
-
-        //        Canvas.Children.Add(p);
-        //    }
-        //}
-
-        //private void DrawRandomTriangle()
-        //{
-        //    var width = this.Width;
-        //    var height = this.Height;
-
-        //    Canvas.Children.Clear();
-
-        //    var p = new Polygon();
-        //    p.Stroke = Brushes.Black;
-        //    p.Points.Add(GetRandomPoint(width, height));
-        //    p.Points.Add(GetRandomPoint(width, height));
-        //    p.Points.Add(GetRandomPoint(width, height));
-
-        //    Canvas.Children.Add(p);
-        //}
-
-        //private Point GetRandomPoint(double maxWidth, double maxHeight)
-        //{
-        //    var x = Math.Round(_random.NextDouble() * maxWidth);
-        //    var y = Math.Round(_random.NextDouble() * maxHeight);
-
-        //    return new Point(x, y);
-        //}
     }
 }
