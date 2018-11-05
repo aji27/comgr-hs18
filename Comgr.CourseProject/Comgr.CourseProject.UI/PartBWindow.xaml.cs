@@ -37,7 +37,7 @@ namespace Comgr.CourseProject.UI
             var triangles = GetTriangles((int)_screenWidth, (int)_screenHeight);
             var lightSources = new LightSource[]
             {
-                new LightSource("w", new Vector3(0, -10, 0), Colors.White)
+                new LightSource("w", new Vector3(0, 0, 0), Colors.White)
             };
 
             _scene = new SceneB((int)_screenWidth, (int)_screenHeight, _pixelsPerInchX, _pixelsPerInchY, triangles, lightSources);
@@ -52,19 +52,16 @@ namespace Comgr.CourseProject.UI
 
         private SceneB _scene;
 
-        private int _rotationInDegrees = 0;
-
         private void CompositionTarget_Rendering(object sender, EventArgs e)
         {
-            _rotationInDegrees += 5;
-            if (_rotationInDegrees > 360)
-                _rotationInDegrees = 0;
+            var transform = RotateXYZ(5)
+                * RotateXYZ(5)
+                * RotateXYZ(5)
+                * RotateXYZ(5)
+                * RotateXYZ(5)
+                * Matrix4x4.CreateTranslation(0, 0, 5);
 
-            var transformation = Matrix4x4.Identity;
-            transformation *= RotateXYZ(_rotationInDegrees);
-            transformation *= Matrix4x4.CreateTranslation(0, 0, 5);
-
-            _scene.Transformation = transformation;
+            _scene.ApplyTransform(transform);
 
             Image.Source = _scene.GetImage();
         }

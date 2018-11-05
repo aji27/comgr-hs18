@@ -28,7 +28,11 @@ namespace Comgr.CourseProject.Lib
             _lightSources = lightSources;
         }
 
-        public Matrix4x4 Transformation { get; set; } = Matrix4x4.Identity;
+        public void ApplyTransform(Matrix4x4 matrix)
+        {
+            foreach (var triangle in _triangles)
+                triangle.ApplyTransform(matrix);
+        }
 
         public ImageSource GetImage()
         {
@@ -41,13 +45,12 @@ namespace Comgr.CourseProject.Lib
             for (int i = 0; i < _triangles.Length; i++)
             {
                 var triangle = _triangles[i];
-                triangle.ApplyTransform(Transformation);
 
                 if (!triangle.IsBackfacing)
                 {
-                    for (int x = (int)triangle.MinScreenX; x <= (int)triangle.MaxScreenX; x++)
+                    for (int x = (int)Math.Min(0, Math.Max(triangle.MinScreenX, 0)); x < (int)Math.Min(Math.Max(triangle.MaxScreenX, 0), _width); x++)
                     {
-                        for (int y = (int)triangle.MinScreenY; y <= (int)triangle.MaxScreenY; y++)
+                        for (int y = (int)Math.Min(0, Math.Max(triangle.MinScreenY, 0)); y < (int)Math.Min(Math.Max(triangle.MaxScreenY, 0), _height); y++)
                         {
                             (Vector3 color, float z) = triangle.CalcColor(x, y, _lightSources);
 

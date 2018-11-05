@@ -24,7 +24,7 @@ namespace Comgr.CourseProject.Lib
             _b = b;
             _c = c;
 
-            _startSurfaceNormal = surfaceNormal;
+            _startSurfaceNormal = Vector3.Normalize(surfaceNormal);
             _currentSurfaceNormal = _startSurfaceNormal;
 
             OnPropertyChanged();
@@ -46,7 +46,14 @@ namespace Comgr.CourseProject.Lib
             _b.ApplyTransform(matrix);
             _c.ApplyTransform(matrix);
 
-            _currentSurfaceNormal = Vector3.TransformNormal(_startSurfaceNormal, matrix);
+            _currentSurfaceNormal = Vector3.Normalize(Vector3.TransformNormal(_startSurfaceNormal, matrix));
+
+            // Gibt dasselbe für _currentSurfaceNormal:
+
+            //if (!Matrix4x4.Invert(matrix, out var inverse))
+            //    throw new ArgumentException("Could not invert given matrix.");
+
+            //_currentSurfaceNormal = Vector3.Normalize(NormalizeByW(Vector4.Transform(new Vector4(_startSurfaceNormal, w: 0), Matrix4x4.Transpose(inverse))));
 
             OnPropertyChanged();
         }
@@ -100,6 +107,10 @@ namespace Comgr.CourseProject.Lib
                     var lightSource = lightSources[i];
 
                     var lVec = lightSource.Center - position;
+                    
+                    // Gibt dasselbe für lVec:
+                    //var lVec = NormalizeByW(new Vector4(lightSource.Center, w: 1) - interpolatedPosition);
+
                     var lVecNorm = Vector3.Normalize(lVec);
                     var nVecNorm = _currentSurfaceNormal;
 
@@ -120,7 +131,11 @@ namespace Comgr.CourseProject.Lib
                         var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
                         var rVec = lVec - (2 * sVec);
                         var specular = light * (float)Math.Pow((Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm)), specularPhongFactor);
-                        color += specular;
+                        //color += specular;
+                    }
+                    else
+                    {
+                        color += new Vector3(0, 0, 1);
                     }
                 }
 
@@ -146,6 +161,12 @@ namespace Comgr.CourseProject.Lib
             return max;
         }
 
-        private static Vector3 NormalizeByW(Vector4 v) => new Vector3(v.X / v.W, v.Y / v.W, v.Z / v.W);
+        private static Vector3 NormalizeByW(Vector4 v)
+        {
+            if (v.W != 1f && v.W != 0f)
+                return new Vector3(v.X / v.W, v.Y / v.W, v.Z / v.W);
+            else
+                return new Vector3(v.X, v.Y, v.Z);
+        }
     }
 }
