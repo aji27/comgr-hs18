@@ -42,7 +42,6 @@ namespace Comgr.CourseProject.UI
 
             _scene = new SceneB((int)_screenWidth, (int)_screenHeight, _pixelsPerInchX, _pixelsPerInchY, triangles, lightSources);
 
-            _sw = Stopwatch.StartNew();
             CompositionTarget.Rendering += CompositionTarget_Rendering;
         }
 
@@ -53,7 +52,6 @@ namespace Comgr.CourseProject.UI
 
         private SceneB _scene;
 
-        private Stopwatch _sw;
         private int _rotationInDegrees = 0;
 
         private void CompositionTarget_Rendering(object sender, EventArgs e)
@@ -103,7 +101,6 @@ namespace Comgr.CourseProject.UI
                 new Vector3(-1, +1, +1)
             };
 
-
             var triangleIdx = new List<(int, int, int, int)>
             {
                 (0, 1, 2, 3), // top
@@ -128,8 +125,8 @@ namespace Comgr.CourseProject.UI
             var colors = new Vector3[]
             {
                 new Vector3(1, 0, 0), // red
-                new Vector3(0, 1, 0), // green
-                new Vector3(0, 0, 1) // blue
+ //               new Vector3(0, 1, 0), // green
+ //               new Vector3(0, 0, 1) // blue
             };
 
             var normals = new Vector3[]
