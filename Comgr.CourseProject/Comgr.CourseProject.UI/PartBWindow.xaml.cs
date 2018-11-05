@@ -17,9 +17,6 @@ using System.Windows.Shapes;
 
 namespace Comgr.CourseProject.UI
 {
-    /// <summary>
-    /// Interaktionslogik für PartBWindow.xaml
-    /// </summary>
     public partial class PartBWindow : Window
     {
         public PartBWindow()
@@ -30,22 +27,27 @@ namespace Comgr.CourseProject.UI
 
         private void PartBWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            _width = Image.Width;
-            _height = Image.Height;
+            _screenWidth = Image.Width;
+            _screenHeight = Image.Height;
 
             var dpiScale = VisualTreeHelper.GetDpi(this);
             _pixelsPerInchX = dpiScale.PixelsPerInchX;
             _pixelsPerInchY = dpiScale.PixelsPerInchY;
 
-            var triangles = GetTriangles((float)_width, (float)_height);
-            _scene = new SceneB(triangles, (int)_width, (int)_height, _pixelsPerInchX, _pixelsPerInchY);
+            var triangles = GetTriangles((int)_screenWidth, (int)_screenHeight);
+            var lightSources = new LightSource[]
+            {
+                new LightSource("w", new Vector3(0, -10, 0), Colors.White)
+            };
+
+            _scene = new SceneB((int)_screenWidth, (int)_screenHeight, _pixelsPerInchX, _pixelsPerInchY, triangles, lightSources);
 
             _sw = Stopwatch.StartNew();
             CompositionTarget.Rendering += CompositionTarget_Rendering;
         }
 
-        private double _width;
-        private double _height;
+        private double _screenWidth;
+        private double _screenHeight;
         private double _pixelsPerInchX;
         private double _pixelsPerInchY;
 
@@ -82,7 +84,7 @@ namespace Comgr.CourseProject.UI
             return transform;
         }
 
-        private Triangle[] GetTriangles(float width, float height)
+        private Triangle[] GetTriangles(int screenWidth, int screenHeight)
         {
             var triangles = new List<Triangle>();
 
@@ -102,38 +104,54 @@ namespace Comgr.CourseProject.UI
             };
 
 
-            var triangleIdx = new List<(int, int, int)>
+            var triangleIdx = new List<(int, int, int, int)>
             {
-                (0, 1, 2), // top
-                (0, 2, 3),
+                (0, 1, 2, 3), // top
+                (0, 2, 3, 3),
 
-                (7, 6, 5), // bottom
-                (7, 5, 4),
+                (7, 6, 5, 2), // bottom
+                (7, 5, 4, 2),
 
-                (0, 3, 7), // left
-                (0, 7, 4),
+                (0, 3, 7, 1), // left
+                (0, 7, 4, 1),
 
-                (2, 1, 5), // right                
-                (2, 5, 6),
+                (2, 1, 5, 0), // right                
+                (2, 5, 6, 0),
 
-                (3, 2, 6), // front
-                (3, 6, 7),
+                (3, 2, 6, 5), // front
+                (3, 6, 7, 5),
 
-                (1, 0, 4), // back                
-                (1, 4, 5),
+                (1, 0, 4, 4), // back                
+                (1, 4, 5, 4)
             };
+
+            var colors = new Vector3[]
+            {
+                new Vector3(1, 0, 0), // red
+                new Vector3(0, 1, 0), // green
+                new Vector3(0, 0, 1) // blue
+            };
+
+            var normals = new Vector3[]
+            {
+                Vector3.UnitX,
+                -Vector3.UnitX,
+                Vector3.UnitY,
+                -Vector3.UnitY,
+                Vector3.UnitZ,
+                -Vector3.UnitZ
+            };
+
+            var random = new Random();
 
             foreach (var t in triangleIdx)
             {
-                //var v1 = new Vertex(points[t.Item1]);
-                //var v2 = new Vertex(points[t.Item2]);
-                //var v3 = new Vertex(points[t.Item3]);
+                var v1 = new Vertex(points[t.Item1], colors[random.Next(0, colors.Length)], screenWidth, screenHeight);
+                var v2 = new Vertex(points[t.Item2], colors[random.Next(0, colors.Length)], screenWidth, screenHeight);
+                var v3 = new Vertex(points[t.Item3], colors[random.Next(0, colors.Length)], screenWidth, screenHeight);
+                var n = normals[t.Item4];
 
-                var v1 = new Vertex(points[t.Item1], Conversions.FromColor(Colors.Red));
-                var v2 = new Vertex(points[t.Item2], Conversions.FromColor(Colors.Green));
-                var v3 = new Vertex(points[t.Item3], Conversions.FromColor(Colors.Blue));
-
-                triangles.Add(new Triangle(v1, v2, v3));
+                triangles.Add(new Triangle(v1, v2, v3, n));
             }
 
             return triangles.ToArray();

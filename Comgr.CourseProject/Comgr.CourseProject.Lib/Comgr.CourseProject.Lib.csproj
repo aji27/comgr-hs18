@@ -50,6 +50,7 @@
     <Compile Include="CheckerProceduralTexture.cs" />
     <Compile Include="Conversions.cs" />
     <Compile Include="GradientRectangle.cs" />
+    <Compile Include="Helper.cs" />
     <Compile Include="HitPoint.cs" />
     <Compile Include="LightSource.cs" />
     <Compile Include="ITexture.cs" />

@@ -28,7 +28,5 @@ namespace Comgr.CourseProject.Lib
         public float Radius => 0.2f;
 
         public Color Color => _color;
-
-
     }
 }
