@@ -13,6 +13,10 @@ namespace Comgr.CourseProject.Lib
 
         private BitmapImage _bitmap;
         private Vector3[,] _rgbArray;
+        private float[,] _zBufferArray;
+
+        private const int Z_MIN = 0;
+        private const int Z_MAX = 10;
 
         public SceneB(Triangle[] triangles, int width, int height, double dpiX, double dpiY)
         {
@@ -21,6 +25,7 @@ namespace Comgr.CourseProject.Lib
             _height = height;
             _bitmap = new BitmapImage(_width, _height, dpiX, dpiY);
             _rgbArray = new Vector3[_width, _height];
+            _zBufferArray = new float[_width, _height];
         }
 
         public Matrix4x4 Transformation { get; set; } = Matrix4x4.Identity;
@@ -28,6 +33,7 @@ namespace Comgr.CourseProject.Lib
         public ImageSource GetImage()
         {
             Array.Clear(_rgbArray, 0, _rgbArray.Length);
+            Array.Clear(_zBufferArray, 0, _zBufferArray.Length);
 
             for (int i = 0; i < _triangles.Length; i++)
             {
@@ -40,7 +46,13 @@ namespace Comgr.CourseProject.Lib
                     {
                         for (int y = (int)triangle2D.MinY; y <= (int)triangle2D.MaxY; y++)
                         {
-                            _rgbArray[x, y] += triangle2D.CalcColor(x, y);
+                            (Vector3 color, float z) = triangle2D.CalcColor(x, y);
+
+                            var zcolor = (int)((z - Z_MIN) / (Z_MAX - Z_MIN) * 255) * new Vector3(1f / 255, 1f / 255, 1f / 255);
+
+                            _rgbArray[x, y] += zcolor;
+
+                            //_rgbArray[x, y] += triangle2D.CalcColor(x, y);
                         }
                     }
                 }

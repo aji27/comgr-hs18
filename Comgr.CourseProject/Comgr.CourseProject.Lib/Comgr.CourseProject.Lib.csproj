@@ -62,6 +62,8 @@
     <Compile Include="SceneA.cs" />
     <Compile Include="Triangle2D.cs" />
     <Compile Include="Triangle.cs" />
+    <Compile Include="Vertex.cs" />
+    <Compile Include="Vertex2D.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

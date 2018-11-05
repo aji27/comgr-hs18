@@ -9,11 +9,11 @@ namespace Comgr.CourseProject.Lib
 {
     public class Triangle
     {
-        private Vector3 _a;
-        private Vector3 _b;
-        private Vector3 _c;
+        private Vertex _a;
+        private Vertex _b;
+        private Vertex _c;
 
-        public Triangle(Vector3 a, Vector3 b, Vector3 c)
+        public Triangle(Vertex a, Vertex b, Vertex c)
         {
             _a = a;
             _b = b;
@@ -22,22 +22,24 @@ namespace Comgr.CourseProject.Lib
 
         public Triangle2D TransformAndProject(Matrix4x4 transform, float width, float height)
         {
-            var a2 = TransformAndProject(_a, transform, width, height);
-            var b2 = TransformAndProject(_b, transform, width, height);
-            var c2 = TransformAndProject(_c, transform, width, height);
+            var a_2D = TransformAndProject(_a, transform, width, height);
+            var b_2D = TransformAndProject(_b, transform, width, height);
+            var c_2D = TransformAndProject(_c, transform, width, height);
 
-            return new Triangle2D(a2, b2, c2);
+            return new Triangle2D(a_2D, b_2D, c_2D);
         }
 
-        private Vector2 TransformAndProject(Vector3 v, Matrix4x4 transform, float width, float height)
+        private Vertex2D TransformAndProject(Vertex v, Matrix4x4 transform, float width, float height)
         {
-            var v_homogenous = new Vector4(v, w: 1);
+            var v_homogenous = new Vector4(v.Position, w: 1);
             var v_transformed = Vector4.Transform(v_homogenous, transform);
 
             var x = width * v_transformed.X / v_transformed.Z + width / 2;
             var y = width * v_transformed.Y / v_transformed.Z + height / 2;
 
-            return new Vector2(x, y);
+            var p = new Vector2(x, y);
+
+            return new Vertex2D(v, v_transformed, p);
         }
     }
 }

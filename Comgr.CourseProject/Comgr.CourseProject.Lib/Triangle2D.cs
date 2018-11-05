@@ -5,45 +5,47 @@ namespace Comgr.CourseProject.Lib
 {
     public class Triangle2D
     {
-        private Vector2 _a;
-        private Vector2 _b;
-        private Vector2 _c;
+        private Vertex2D _a_2D;
+        private Vertex2D _b_2D;
+        private Vertex2D _c_2D;
+
+        // Better Checkout this: http://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/rasterization-stage
 
         private bool _isBackface;
 
         private Matrix2x2 _inverse;
 
-        public Triangle2D(Vector2 a, Vector2 b, Vector2 c)
+        public Triangle2D(Vertex2D a_2D, Vertex2D b_2D, Vertex2D c_2D)
         {
-            _a = a;
-            _b = b;
-            _c = c;
+            _a_2D = a_2D;
+            _b_2D = b_2D;
+            _c_2D = c_2D;
 
-            var AB = _b - _a;
-            var AC = _c - _a;
+            var AB = _b_2D.Position - _a_2D.Position;
+            var AC = _c_2D.Position - _a_2D.Position;
 
             // Backface Culling: when Z > 0 = Clockwise, z < 0 Counter Clockwise
             var cross = Vector3.Cross(new Vector3(AB, 0), new Vector3(AC, 0)); 
-            _isBackface = cross.Z > 0;
+            _isBackface = cross.Z < 0;
 
             var A = new Matrix2x2(AB.X, AB.Y, AC.X, AC.Y);
             _inverse = A.Inverse();
         }
         
-        public float MinX => Min(_a.X, _b.X, _c.X);
+        public float MinX => Min(_a_2D.Position.X, _b_2D.Position.X, _c_2D.Position.X);
 
-        public float MinY => Min(_a.Y, _b.Y, _c.Y);
+        public float MinY => Min(_a_2D.Position.Y, _b_2D.Position.Y, _c_2D.Position.Y);
 
-        public float MaxX => Max(_a.X, _b.X, _c.X);
+        public float MaxX => Max(_a_2D.Position.X, _b_2D.Position.X, _c_2D.Position.X);
 
-        public float MaxY => Max(_a.Y, _b.Y, _c.Y);
+        public float MaxY => Max(_a_2D.Position.Y, _b_2D.Position.Y, _c_2D.Position.Y);
 
         public bool IsBackface => _isBackface;
 
-        public Vector3 CalcColor(float x, float y)
+        public (Vector3 color, float z) CalcColor(float x, float y)
         {
             var p = new Vector2(x, y);
-            var AP = p - _a;
+            var AP = p - _a_2D.Position;
             var vec = _inverse * AP;
             var u = vec.X;
             var v = vec.Y;
@@ -51,10 +53,16 @@ namespace Comgr.CourseProject.Lib
 
             if (drawPoint)
             {
-                return Conversions.FromColor(Colors.LightSkyBlue);
+                var homogenousColor = _a_2D.Color + u * (_b_2D.Color - _a_2D.Color) + v * (_c_2D.Color - _a_2D.Color);
+                var color = new Vector3(homogenousColor.X / homogenousColor.W, homogenousColor.Y / homogenousColor.W, homogenousColor.Z / homogenousColor.W);
+
+                var homogenousPosition = _a_2D.HomogenousPosition + u * (_b_2D.HomogenousPosition - _a_2D.HomogenousPosition) + v * (_c_2D.HomogenousPosition - _a_2D.HomogenousPosition);
+                var position = new Vector3(homogenousPosition.X / homogenousPosition.W, homogenousPosition.Y / homogenousPosition.W, homogenousPosition.Z / homogenousPosition.W);
+
+                return (color, position.Z);
             }
 
-            return Vector3.Zero;
+            return (Vector3.Zero, 0);
         }        
  
         private float Min(float f1, float f2, float f3)

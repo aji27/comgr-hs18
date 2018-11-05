@@ -56,22 +56,17 @@ namespace Comgr.CourseProject.UI
 
         private void CompositionTarget_Rendering(object sender, EventArgs e)
         {
-            if (_sw.Elapsed.TotalMilliseconds >= 0)
-            {
-                _rotationInDegrees += 5;
-                if (_rotationInDegrees > 360)
-                    _rotationInDegrees = 0;
+            _rotationInDegrees += 5;
+            if (_rotationInDegrees > 360)
+                _rotationInDegrees = 0;
 
-                var transformation = Matrix4x4.Identity;
-                transformation *= RotateXYZ(_rotationInDegrees);
-                transformation *= Matrix4x4.CreateTranslation(0, 0, 5);
+            var transformation = Matrix4x4.Identity;
+            transformation *= RotateXYZ(_rotationInDegrees);
+            transformation *= Matrix4x4.CreateTranslation(0, 0, 5);
 
-                _scene.Transformation = transformation;
+            _scene.Transformation = transformation;
 
-                Image.Source = _scene.GetImage();
-
-                _sw.Restart();
-            }
+            Image.Source = _scene.GetImage();
         }
 
         private static float DegreesToRadians(float degree) => (float)(Math.PI / 180) * degree;
@@ -130,9 +125,13 @@ namespace Comgr.CourseProject.UI
 
             foreach (var t in triangleIdx)
             {
-                var v1 = points[t.Item1];
-                var v2 = points[t.Item2];
-                var v3 = points[t.Item3];
+                //var v1 = new Vertex(points[t.Item1]);
+                //var v2 = new Vertex(points[t.Item2]);
+                //var v3 = new Vertex(points[t.Item3]);
+
+                var v1 = new Vertex(points[t.Item1], Conversions.FromColor(Colors.Red));
+                var v2 = new Vertex(points[t.Item2], Conversions.FromColor(Colors.Green));
+                var v3 = new Vertex(points[t.Item3], Conversions.FromColor(Colors.Blue));
 
                 triangles.Add(new Triangle(v1, v2, v3));
             }
