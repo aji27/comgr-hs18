@@ -16,7 +16,10 @@ namespace Comgr.CourseProject.Lib
         private Triangle[] _triangles;
         private LightSource[] _lightSources;
 
-        public SceneB(int screenWidth, int screenHeight, double dpiX, double dpiY, Triangle[] triangles, LightSource[] lightSources)
+        private bool _gammaCorrect;
+        private bool _zBuffer;
+
+        public SceneB(int screenWidth, int screenHeight, double dpiX, double dpiY, Triangle[] triangles, LightSource[] lightSources, bool gammaCorrect, bool zBuffer)
         {
             _screenWidth = screenWidth;
             _screenHeight = screenHeight;
@@ -26,6 +29,9 @@ namespace Comgr.CourseProject.Lib
             
             _triangles = triangles;
             _lightSources = lightSources;
+
+            _gammaCorrect = gammaCorrect;
+            _zBuffer = zBuffer;
         }
 
         public void ApplyTransform(Matrix4x4 matrix)
@@ -57,14 +63,14 @@ namespace Comgr.CourseProject.Lib
                             if (!float.IsInfinity(z)
                                 && !float.IsNaN(z))
                             {
-                                // visualize z-buffer
-
-                                // int Z_MIN = 0;
-                                // int Z_MAX = 10;
-                                // var zcolor = (int)((z - Z_MIN) / (Z_MAX - Z_MIN) * 255) * new Vector3(1f / 255, 1f / 255, 1f / 255);
-                                // _rgbArray[x, y] = zcolor;
-
-                                if (z < _zBufferArray[x, y])
+                                if (_zBuffer)
+                                {
+                                    int Z_MIN = 0;
+                                    int Z_MAX = 10;
+                                    var zcolor = (int)((z - Z_MIN) / (Z_MAX - Z_MIN) * 255) * new Vector3(1f / 255, 1f / 255, 1f / 255);
+                                    _rgbArray[x, y] = zcolor;
+                                }
+                                else if (z < _zBufferArray[x, y])
                                 {
                                     _rgbArray[x, y] = color;
                                     _zBufferArray[x, y] = z;
@@ -80,7 +86,7 @@ namespace Comgr.CourseProject.Lib
                 for (int y = 0; y < _screenHeight; y++)
                 {
                     var rgb = _rgbArray[x, y];
-                    var c = Conversions.FromRGB(rgb, gammaCorrection: false);
+                    var c = Conversions.FromRGB(rgb, _gammaCorrect);
                     _bitmap.Set(x, y, c);
                 }
             }

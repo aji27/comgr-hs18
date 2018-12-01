@@ -5,8 +5,40 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Comgr.CourseProject.UI"
         mc:Ignorable="d"
-        Title="PartBWindow" Height="640" Width="640">
-    <Grid Margin="20">
-        <Image x:Name="Image" Width="600" Height="600" />
+        Title="comgr - HS18 - course project - Ajanth Kandasamy" Height="640" Width="768">
+    <Grid x:Name="LayoutRoot" Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" Margin="0,0,15,0">
+
+            <TextBlock Text="DiffuseLambert" Margin="0,5,0,0"/>
+            <TextBox x:Name="DiffuseLambert" Text="True" />
+            <TextBlock Text="SpecularPhong" Margin="0,5,0,0"/>
+            <TextBox x:Name="SpecularPhong" Text="True" />
+            <TextBlock Text="SpecularPhongFactor" Margin="0,5,0,0"/>
+            <TextBox x:Name="SpecularPhongFactor" Text="5000" />
+            <TextBlock Text="Z-Buffer" Margin="0,5,0,0"/>
+            <TextBox x:Name="ZBuffer" Text="False" />
+            <TextBlock Text="TextureIndex (-1 = no, 0, 1 or 2)" Margin="0,5,0,0"/>
+            <TextBox x:Name="TextureIndex" Text="-1" />
+            <TextBlock Text="BilinearFilter" Margin="0,5,0,0"/>
+            <TextBox x:Name="BilinearFilter" Text="False" />
+            <TextBlock Text="GammaCorrect" Margin="0,5,0,0"/>
+            <TextBox x:Name="GammaCorrect" Text="True" />
+   
+            <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
+                <Button x:Name="Start" Content="Start" Margin="0,0,5,0" />
+                <Button x:Name="Cancel" Content="Cancel"/>
+            </StackPanel>
+        </StackPanel>
+        <Border Grid.Row="0" Grid.Column="1" Margin="20, 0, 0, 20" BorderThickness="1" BorderBrush="Black">
+            <Image x:Name="Image" Margin="5" Width="512" Height="512" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
     </Grid>
 </Window>

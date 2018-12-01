@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 
 namespace Comgr.CourseProject.Lib
 {
+
+
     public class Triangle
     {
         private Vertex _a;
@@ -18,9 +20,9 @@ namespace Comgr.CourseProject.Lib
         private bool _isBackfacingOnScreen;
         private Matrix2x2 _barryCentricMatrixInverse;
 
-        private TriangleTexture _texture;
+        private TriangleOptions _options;
 
-        public Triangle(Vertex a, Vertex b, Vertex c, TriangleTexture texture = null)
+        public Triangle(Vertex a, Vertex b, Vertex c, TriangleOptions options)
         {
             _a = a;
             _b = b;
@@ -32,7 +34,7 @@ namespace Comgr.CourseProject.Lib
             _startSurfaceNormal = -Vector3.Normalize(Vector3.Cross(ab, ac));
             _currentSurfaceNormal = _startSurfaceNormal;
 
-            _texture = texture;
+            _options = options;
 
             OnPropertyChanged();
         }
@@ -105,7 +107,7 @@ namespace Comgr.CourseProject.Lib
 
                 var material = Vector3.Zero;
 
-                if (_texture == null)
+                if (_options.Texture == null)
                 {
                     var interpolatedMaterial = _a.HomogenousColor + u * (_b.HomogenousColor - _a.HomogenousColor) + v * (_c.HomogenousColor - _a.HomogenousColor);
                     material = interpolatedMaterial.NormalizeByW();
@@ -113,7 +115,7 @@ namespace Comgr.CourseProject.Lib
                 else
                 {
                     var interpolatedTexture = _a.TexturePosition + u * (_b.TexturePosition - _a.TexturePosition) + v * (_c.TexturePosition - _a.TexturePosition);
-                    material = _texture.CalcColor(interpolatedTexture.X, interpolatedTexture.Y);
+                    material = _options.Texture.CalcColor(interpolatedTexture.X, interpolatedTexture.Y, _options.BilinearFilter);
                 }
 
                 var interpolatedPosition = _a.HomogenousPosition + u * (_b.HomogenousPosition - _a.HomogenousPosition) + v * (_c.HomogenousPosition - _a.HomogenousPosition);
@@ -136,7 +138,8 @@ namespace Comgr.CourseProject.Lib
                     // Diffuse Lambert
                     var dot_diffuse = Vector3.Dot(nVecNorm, lVecNorm);
 
-                    if (dot_diffuse > 0)
+                    if (_options.DiffuseLambert 
+                        && dot_diffuse > 0)
                     {
                         var diffuse = Vector3.Multiply(light, material) * dot_diffuse;
                         color += diffuse;
@@ -145,9 +148,7 @@ namespace Comgr.CourseProject.Lib
                     // Specular Phong
                     var eye = new Vector3(0, 0, 0);
                     var rayVecNorm = Vector3.Normalize(position - eye);
-
-                    var specularPhongFactor = 1000;
-
+                                        
                     // var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
                     // var rVec = lVec - (2 * sVec);
                     // var dot_phong = Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm);
@@ -156,9 +157,10 @@ namespace Comgr.CourseProject.Lib
 
                     var dot_phong = Vector3.Dot(Vector3.Normalize(-lVec), rayVecNorm);                                       
 
-                    if (dot_phong > 0)
+                    if (_options.SpecularPhong 
+                        && dot_phong > 0)
                     {
-                        var specular = light * (float)Math.Pow(dot_phong, specularPhongFactor);
+                        var specular = light * (float)Math.Pow(dot_phong, _options.SpecularPhongFactor);
                         color += specular;
                     }
                 }

@@ -1,19 +1,12 @@
 ﻿using Comgr.CourseProject.Lib;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace Comgr.CourseProject.UI
 {
@@ -21,39 +14,91 @@ namespace Comgr.CourseProject.UI
     {
         private bool _isRunning = true;
 
+        private float _zoom = 5;
+        private float _zoomMax = 15;
+        private float _zoomMin = -15;
+
+        private static readonly TriangleTexture[] _textures = new TriangleTexture[] 
+        {
+            new TriangleTexture(@"Resources\TilePattern-n1_UR_1024.png")
+        };
+
         public PartBWindow()
         {
             InitializeComponent();
-            this.Loaded += PartBWindow_Loaded;
-            this.KeyUp += PartBWindow_KeyUp;
+
+            SetControlsEnabled(true);
+
+            Start.Click += Start_Click;
+            Cancel.Click += Cancel_Click;
+
+            Image.MouseWheel += Image_MouseWheel;
         }
 
-        private void PartBWindow_KeyUp(object sender, KeyEventArgs e)
+        private void Image_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (e.Key == Key.Space)
+            if (_isRunning)
             {
-                _isRunning = !_isRunning;
+                var delta = -(120f / e.Delta);
+
+                var newZoom = _zoom + delta;
+                if (newZoom >= _zoomMin
+                    && newZoom <= _zoomMax)
+                {
+                    _zoom = newZoom;
+                }
             }
         }
 
-        private void PartBWindow_Loaded(object sender, RoutedEventArgs e)
+        private void Cancel_Click(object sender, RoutedEventArgs e)
         {
-            _screenWidth = Image.Width;
-            _screenHeight = Image.Height;
+            _isRunning = false;
+            CompositionTarget.Rendering -= CompositionTarget_Rendering;
+            SetControlsEnabled(true);
+        }
 
-            var dpiScale = VisualTreeHelper.GetDpi(this);
-            _pixelsPerInchX = dpiScale.PixelsPerInchX;
-            _pixelsPerInchY = dpiScale.PixelsPerInchY;
-
-            var triangles = GetTriangles((int)_screenWidth, (int)_screenHeight);
-            var lightSources = new LightSource[]
+        private void Start_Click(object sender, RoutedEventArgs e)
+        {
+            try
             {
-                new LightSource("w", new Vector3(0.5f, 0.5f, -5), Colors.White)
-            };
+                SetControlsEnabled(false);
 
-            _scene = new SceneB((int)_screenWidth, (int)_screenHeight, _pixelsPerInchX, _pixelsPerInchY, triangles, lightSources);
+                _zoom = 5;
 
-            CompositionTarget.Rendering += CompositionTarget_Rendering;
+                _screenWidth = Image.Width;
+                _screenHeight = Image.Height;
+
+                var dpiScale = VisualTreeHelper.GetDpi(this);
+                _pixelsPerInchX = dpiScale.PixelsPerInchX;
+                _pixelsPerInchY = dpiScale.PixelsPerInchY;
+
+                var textureIndex = int.Parse(TextureIndex.Text);
+
+                var options = new TriangleOptions()
+                {
+                    DiffuseLambert = bool.Parse(DiffuseLambert.Text),
+                    SpecularPhong = bool.Parse(SpecularPhong.Text),
+                    SpecularPhongFactor = float.Parse(SpecularPhongFactor.Text),
+                    Texture = textureIndex >= 0 ? _textures[textureIndex] : null,
+                    BilinearFilter = bool.Parse(BilinearFilter.Text)
+                };
+
+                var triangles = GetTriangles((int)_screenWidth, (int)_screenHeight, options);
+                var lightSources = new LightSource[]
+                {
+                    new LightSource("w", new Vector3(0.5f, 0.5f, -5), Colors.White)
+                };
+
+                _scene = new SceneB((int)_screenWidth, (int)_screenHeight, _pixelsPerInchX, _pixelsPerInchY, triangles, lightSources, bool.Parse(GammaCorrect.Text), bool.Parse(ZBuffer.Text));
+
+                _isRunning = true;
+                CompositionTarget.Rendering += CompositionTarget_Rendering;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                SetControlsEnabled(true);
+            }
         }
 
         private double _screenWidth;
@@ -74,7 +119,7 @@ namespace Comgr.CourseProject.UI
                     rotationInDegrees = 0;
 
                 var transform = RotateXYZ(rotationInDegrees)
-                    * Matrix4x4.CreateTranslation(0, 0, 5);
+                    * Matrix4x4.CreateTranslation(0, 0, _zoom);
 
                 _scene.ApplyTransform(transform);
 
@@ -122,7 +167,7 @@ namespace Comgr.CourseProject.UI
             return transform;
         }
 
-        private Triangle[] GetTriangles(int screenWidth, int screenHeight)
+        private Triangle[] GetTriangles(int screenWidth, int screenHeight, TriangleOptions options)
         {
             var triangles = new List<Triangle>();
 
@@ -138,32 +183,32 @@ namespace Comgr.CourseProject.UI
                 new Vector3(-1, +1, +1)
             };
 
-            var triangleIdx = new List<(int, int, int, int, int, int, int, int)>
+            var triangleIdx = new List<(int, int, int, int, int, int, int)>
             {
-                (0, 1, 2, 2, 0, 3, 1, 0), // top
-                (0, 2, 3, 2, 0, 0, 3, 2),
+                (0, 1, 2, 2, 3, 1, 0), // top
+                (0, 2, 3, 2, 0, 3, 2),
 
-                (7, 6, 5, 3, 0, 3, 1, 0), // bottom
-                (7, 5, 4, 3, 0, 0, 3, 2),
+                (7, 6, 5, 3, 3, 1, 0), // bottom
+                (7, 5, 4, 3, 0, 3, 2),
 
-                (0, 3, 7, 0, 0, 3, 1, 0), // left
-                (0, 7, 4, 0, 0, 0, 3, 2),
+                (0, 3, 7, 0, 3, 1, 0), // left
+                (0, 7, 4, 0, 0, 3, 2),
 
-                (2, 1, 5, 1, 0, 3, 1, 0), // right                
-                (2, 5, 6, 1, 0, 0, 3, 2),
+                (2, 1, 5, 1, 3, 1, 0), // right                
+                (2, 5, 6, 1, 0, 3, 2),
 
-                (3, 2, 6, 4, 0, 3, 1, 0), // front
-                (3, 6, 7, 4, 0, 0, 3, 2),
+                (3, 2, 6, 4, 3, 1, 0), // front
+                (3, 6, 7, 4, 0, 3, 2),
 
-                (1, 0, 4, 5, 0, 3, 1, 0), // back                
-                (1, 4, 5, 5, 0, 0, 3, 2)
+                (1, 0, 4, 5, 3, 1, 0), // back                
+                (1, 4, 5, 5, 0, 3, 2)
             };
 
             var colors = new Vector3[]
             {
                 new Vector3(1, 0, 0), // red
-                //new Vector3(0, 1, 0), // green
-                //new Vector3(0, 0, 1) // blue
+                new Vector3(0, 1, 0), // green
+                new Vector3(0, 0, 1) // blue
             };
 
             var normals = new Vector3[]
@@ -174,11 +219,6 @@ namespace Comgr.CourseProject.UI
                 Vector3.UnitY,
                 -Vector3.UnitZ,
                 Vector3.UnitZ
-            };
-
-            var textures = new TriangleTexture[]
-            {
-                new TriangleTexture(@"Resources\TilePattern-n1_UR_1024.png")
             };
 
             var textureCoordinates = new Vector2[]
@@ -195,33 +235,44 @@ namespace Comgr.CourseProject.UI
             {
                 var n = normals[t.Item4];
 
-                TriangleTexture txt = null;
-
-                if (t.Item5 >= 0)
-                    txt = textures[t.Item5];
+                bool hasTexture = options.Texture != null;
 
                 var t1 = Vector2.Zero;
-                if (txt != null)
-                    t1 = textureCoordinates[t.Item6];
+                if (hasTexture)
+                    t1 = textureCoordinates[t.Item5];
 
                 var v1 = new Vertex(points[t.Item1], colors[random.Next(0, colors.Length)], screenWidth, screenHeight, t1);
 
                 var t2 = Vector2.Zero;
-                if (txt != null)
-                    t2 = textureCoordinates[t.Item7];
+                if (hasTexture)
+                    t2 = textureCoordinates[t.Item6];
 
                 var v2 = new Vertex(points[t.Item2], colors[random.Next(0, colors.Length)], screenWidth, screenHeight, t2);
 
                 var t3 = Vector2.Zero;
-                if (txt != null)
-                    t3 = textureCoordinates[t.Item8];
+                if (hasTexture)
+                    t3 = textureCoordinates[t.Item7];
 
                 var v3 = new Vertex(points[t.Item3], colors[random.Next(0, colors.Length)], screenWidth, screenHeight, t3);
                 
-                triangles.Add(new Triangle(v1, v2, v3, txt));
+                triangles.Add(new Triangle(v1, v2, v3, options));
             }
 
             return triangles.ToArray();
+        }
+
+        private void SetControlsEnabled(bool enabled)
+        {
+            TextureIndex.IsEnabled = enabled;
+            BilinearFilter.IsEnabled = enabled;
+            ZBuffer.IsEnabled = enabled;
+            GammaCorrect.IsEnabled = enabled;
+            DiffuseLambert.IsEnabled = enabled;
+            SpecularPhong.IsEnabled = enabled;
+            SpecularPhongFactor.IsEnabled = enabled;
+
+            Start.IsEnabled = enabled;
+            Cancel.IsEnabled = !enabled;
         }
     }
 }
