@@ -37,13 +37,9 @@ namespace Comgr.CourseProject.Lib
 
             OnPropertyChanged();
         }
-
-        public Vector3 Position => _position;
-
+                        
         public Vector4 HomogenousPosition => _homogenousPosition;
-
-        public Vector3 Color => _color;
-
+                
         public Vector4 HomogenousColor => _homogenousColor;
 
         public Vector2 ScreenPosition => _screenPosition;
@@ -57,20 +53,21 @@ namespace Comgr.CourseProject.Lib
 
         private Vector4 GetHomogenousPosition()
         {
-            var v_homogenous = new Vector4(Position, w: 1);
+            var v_homogenous = new Vector4(_position, w: 1);
             var v_transformed = Vector4.Transform(v_homogenous, _currentMatrix);
             return v_transformed;
         }
 
         private Vector4 GetHomogenousColor()
         {
-            return new Vector4(Color / _homogenousPosition.W, 1 / _homogenousPosition.W);
+            return new Vector4(_color / _homogenousPosition.W, 1f / _homogenousPosition.W);
         }
 
         private Vector2 GetScreenPosition()
         {
-            var x = _screenWidth * _homogenousPosition.X / _homogenousPosition.Z + _screenWidth / 2;
-            var y = _screenWidth * _homogenousPosition.Y / _homogenousPosition.Z + _screenHeight / 2;
+            var homogenousPosition = _homogenousPosition.NormalizeByW();
+            var x = _screenWidth * homogenousPosition.X / homogenousPosition.Z + _screenWidth / 2;
+            var y = _screenWidth * homogenousPosition.Y / homogenousPosition.Z + _screenHeight / 2;
 
             return new Vector2(x, y);
         }

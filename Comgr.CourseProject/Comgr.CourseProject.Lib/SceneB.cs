@@ -6,8 +6,8 @@ namespace Comgr.CourseProject.Lib
 {
     public class SceneB
     {
-        private int _width;
-        private int _height;
+        private int _screenWidth;
+        private int _screenHeight;
 
         private BitmapImage _bitmap;
         private Vector3[,] _rgbArray;
@@ -16,13 +16,13 @@ namespace Comgr.CourseProject.Lib
         private Triangle[] _triangles;
         private LightSource[] _lightSources;
 
-        public SceneB(int width, int height, double dpiX, double dpiY, Triangle[] triangles, LightSource[] lightSources)
+        public SceneB(int screenWidth, int screenHeight, double dpiX, double dpiY, Triangle[] triangles, LightSource[] lightSources)
         {
-            _width = width;
-            _height = height;
-            _bitmap = new BitmapImage(_width, _height, dpiX, dpiY);
-            _rgbArray = new Vector3[_width, _height];
-            _zBufferArray = new float[_width, _height];
+            _screenWidth = screenWidth;
+            _screenHeight = screenHeight;
+            _bitmap = new BitmapImage(_screenWidth, _screenHeight, dpiX, dpiY);
+            _rgbArray = new Vector3[_screenWidth, _screenHeight];
+            _zBufferArray = new float[_screenWidth, _screenHeight];
             
             _triangles = triangles;
             _lightSources = lightSources;
@@ -38,8 +38,8 @@ namespace Comgr.CourseProject.Lib
         {
             Array.Clear(_rgbArray, 0, _rgbArray.Length);
 
-            for (int x = 0; x < _width; x++)
-                for (int y = 0; y < _height; y++)
+            for (int x = 0; x < _screenWidth; x++)
+                for (int y = 0; y < _screenHeight; y++)
                     _zBufferArray[x, y] = float.PositiveInfinity;
 
             for (int i = 0; i < _triangles.Length; i++)
@@ -48,9 +48,9 @@ namespace Comgr.CourseProject.Lib
 
                 if (!triangle.IsBackfacing)
                 {
-                    for (int x = (int)Math.Min(0, Math.Max(triangle.MinScreenX, 0)); x < (int)Math.Min(Math.Max(triangle.MaxScreenX, 0), _width); x++)
+                    for (int x = (int)Math.Min(0, Math.Max(triangle.MinScreenX, 0)); x < (int)Math.Min(Math.Max(triangle.MaxScreenX, 0), _screenWidth); x++)
                     {
-                        for (int y = (int)Math.Min(0, Math.Max(triangle.MinScreenY, 0)); y < (int)Math.Min(Math.Max(triangle.MaxScreenY, 0), _height); y++)
+                        for (int y = (int)Math.Min(0, Math.Max(triangle.MinScreenY, 0)); y < (int)Math.Min(Math.Max(triangle.MaxScreenY, 0), _screenHeight); y++)
                         {
                             (Vector3 color, float z) = triangle.CalcColor(x, y, _lightSources);
 
@@ -75,12 +75,12 @@ namespace Comgr.CourseProject.Lib
                 }
             }
 
-            for (int x = 0; x < _width; x++)
+            for (int x = 0; x < _screenWidth; x++)
             {
-                for (int y = 0; y < _height; y++)
+                for (int y = 0; y < _screenHeight; y++)
                 {
                     var rgb = _rgbArray[x, y];
-                    var c = Conversions.FromRGB(rgb, gammaCorrection: true);
+                    var c = Conversions.FromRGB(rgb, gammaCorrection: false);
                     _bitmap.Set(x, y, c);
                 }
             }

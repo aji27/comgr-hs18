@@ -19,10 +19,21 @@ namespace Comgr.CourseProject.UI
 {
     public partial class PartBWindow : Window
     {
+        private bool _isRunning = true;
+
         public PartBWindow()
         {
             InitializeComponent();
             this.Loaded += PartBWindow_Loaded;
+            this.KeyUp += PartBWindow_KeyUp;
+        }
+
+        private void PartBWindow_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Space)
+            {
+                _isRunning = !_isRunning;
+            }
         }
 
         private void PartBWindow_Loaded(object sender, RoutedEventArgs e)
@@ -37,7 +48,7 @@ namespace Comgr.CourseProject.UI
             var triangles = GetTriangles((int)_screenWidth, (int)_screenHeight);
             var lightSources = new LightSource[]
             {
-                new LightSource("w", new Vector3(0, 0, 0), Colors.White)
+                new LightSource("w", new Vector3(0.5f, 0.5f, -5), Colors.White)
             };
 
             _scene = new SceneB((int)_screenWidth, (int)_screenHeight, _pixelsPerInchX, _pixelsPerInchY, triangles, lightSources);
@@ -52,21 +63,53 @@ namespace Comgr.CourseProject.UI
 
         private SceneB _scene;
 
+        private int rotationInDegrees = 0;
+
         private void CompositionTarget_Rendering(object sender, EventArgs e)
         {
-            var transform = RotateXYZ(5)
-                * RotateXYZ(5)
-                * RotateXYZ(5)
-                * RotateXYZ(5)
-                * RotateXYZ(5)
-                * Matrix4x4.CreateTranslation(0, 0, 5);
+            if (_isRunning)
+            {
+                rotationInDegrees += 10;
+                if (rotationInDegrees > 360)
+                    rotationInDegrees = 0;
 
-            _scene.ApplyTransform(transform);
+                var transform = RotateXYZ(rotationInDegrees)
+                    * Matrix4x4.CreateTranslation(0, 0, 5);
 
-            Image.Source = _scene.GetImage();
+                _scene.ApplyTransform(transform);
+
+                Image.Source = _scene.GetImage();
+            }
         }
 
         private static float DegreesToRadians(float degree) => (float)(Math.PI / 180) * degree;
+
+        public Matrix4x4 RotateX(float angleInDegrees)
+        {
+            var radians = DegreesToRadians(angleInDegrees);
+            var transform =
+            Matrix4x4.CreateRotationX(radians);
+
+            return transform;
+        }
+
+        public Matrix4x4 RotateY(float angleInDegrees)
+        {
+            var radians = DegreesToRadians(angleInDegrees);
+            var transform =
+            Matrix4x4.CreateRotationY(radians);
+
+            return transform;
+        }
+
+        public Matrix4x4 RotateZ(float angleInDegrees)
+        {
+            var radians = DegreesToRadians(angleInDegrees);
+            var transform =
+            Matrix4x4.CreateRotationZ(radians);
+
+            return transform;
+        }
 
         public Matrix4x4 RotateXYZ(float angleInDegrees)
         {
@@ -100,40 +143,40 @@ namespace Comgr.CourseProject.UI
 
             var triangleIdx = new List<(int, int, int, int)>
             {
-                (0, 1, 2, 3), // top
-                (0, 2, 3, 3),
+                (0, 1, 2, 2), // top
+                (0, 2, 3, 2),
 
-                (7, 6, 5, 2), // bottom
-                (7, 5, 4, 2),
+                (7, 6, 5, 3), // bottom
+                (7, 5, 4, 3),
 
-                (0, 3, 7, 1), // left
-                (0, 7, 4, 1),
+                (0, 3, 7, 0), // left
+                (0, 7, 4, 0),
 
-                (2, 1, 5, 0), // right                
-                (2, 5, 6, 0),
+                (2, 1, 5, 1), // right                
+                (2, 5, 6, 1),
 
-                (3, 2, 6, 5), // front
-                (3, 6, 7, 5),
+                (3, 2, 6, 4), // front
+                (3, 6, 7, 4),
 
-                (1, 0, 4, 4), // back                
-                (1, 4, 5, 4)
+                (1, 0, 4, 5), // back                
+                (1, 4, 5, 5)
             };
 
             var colors = new Vector3[]
             {
                 new Vector3(1, 0, 0), // red
- //               new Vector3(0, 1, 0), // green
- //               new Vector3(0, 0, 1) // blue
+                new Vector3(0, 1, 0), // green
+                new Vector3(0, 0, 1) // blue
             };
 
             var normals = new Vector3[]
             {
-                Vector3.UnitX,
                 -Vector3.UnitX,
-                Vector3.UnitY,
+                Vector3.UnitX,
                 -Vector3.UnitY,
-                Vector3.UnitZ,
-                -Vector3.UnitZ
+                Vector3.UnitY,
+                -Vector3.UnitZ,
+                Vector3.UnitZ
             };
 
             var random = new Random();
@@ -145,7 +188,7 @@ namespace Comgr.CourseProject.UI
                 var v3 = new Vertex(points[t.Item3], colors[random.Next(0, colors.Length)], screenWidth, screenHeight);
                 var n = normals[t.Item4];
 
-                triangles.Add(new Triangle(v1, v2, v3, n));
+                triangles.Add(new Triangle(v1, v2, v3));
             }
 
             return triangles.ToArray();
