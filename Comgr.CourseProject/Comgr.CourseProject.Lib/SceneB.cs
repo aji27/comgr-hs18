@@ -58,23 +58,43 @@ namespace Comgr.CourseProject.Lib
                     {
                         for (int y = (int)Math.Min(0, Math.Max(triangle.MinScreenY, 0)); y < (int)Math.Min(Math.Max(triangle.MaxScreenY, 0), _screenHeight); y++)
                         {
-                            (Vector3 color, float z) = triangle.CalcColor(x, y, _lightSources);
+                            var z = triangle.CalcZ(x, y);
 
                             if (!float.IsInfinity(z)
-                                && !float.IsNaN(z))
+                                && !float.IsNaN(z)
+                                && z < _zBufferArray[x, y])
                             {
-                                if (_zBuffer)
-                                {
-                                    int Z_MIN = 0;
-                                    int Z_MAX = 10;
-                                    var zcolor = (int)((z - Z_MIN) / (Z_MAX - Z_MIN) * 255) * new Vector3(1f / 255, 1f / 255, 1f / 255);
-                                    _rgbArray[x, y] = zcolor;
-                                }
-                                else if (z < _zBufferArray[x, y])
-                                {
-                                    _rgbArray[x, y] = color;
-                                    _zBufferArray[x, y] = z;
-                                }
+                                _zBufferArray[x, y] = z;
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (int i = 0; i < _triangles.Length; i++)
+            {
+                var triangle = _triangles[i];
+
+                if (!triangle.IsBackfacing)
+                {
+                    for (int x = (int)Math.Min(0, Math.Max(triangle.MinScreenX, 0)); x < (int)Math.Min(Math.Max(triangle.MaxScreenX, 0), _screenWidth); x++)
+                    {
+                        for (int y = (int)Math.Min(0, Math.Max(triangle.MinScreenY, 0)); y < (int)Math.Min(Math.Max(triangle.MaxScreenY, 0), _screenHeight); y++)
+                        {
+                            float z = _zBufferArray[x, y];
+
+                            if (_zBuffer)
+                            {
+                                int Z_MIN = 0;
+                                int Z_MAX = 10;
+                                var zcolor = (int)((z - Z_MIN) / (Z_MAX - Z_MIN) * 255) * new Vector3(1f / 255, 1f / 255, 1f / 255);
+                                _rgbArray[x, y] = zcolor;
+                            }
+                            else
+                            {
+                                var rgb = Vector3.Zero;
+                                if (triangle.CalcColor(x, y, _lightSources, z, out rgb))
+                                    _rgbArray[x, y] = rgb;
                             }
                         }
                     }

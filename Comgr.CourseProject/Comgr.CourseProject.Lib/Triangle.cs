@@ -92,7 +92,7 @@ namespace Comgr.CourseProject.Lib
             return A.Inverse();
         }
 
-        public (Vector3 color, float z) CalcColor(int x, int y, LightSource[] lightSources)
+        public float CalcZ(int x, int y)
         {
             var p = new Vector2(x, y);
             var AP = p - _a.ScreenPosition;
@@ -103,8 +103,28 @@ namespace Comgr.CourseProject.Lib
 
             if (drawPoint)
             {
-                var color = Vector3.Zero;
+                var interpolatedPosition = _a.HomogenousPosition + u * (_b.HomogenousPosition - _a.HomogenousPosition) + v * (_c.HomogenousPosition - _a.HomogenousPosition);
+                var position = interpolatedPosition.NormalizeByW();
 
+                return position.Z;
+            }
+
+            return float.PositiveInfinity;
+        }
+
+        public bool CalcColor(int x, int y, LightSource[] lightSources, float z, out Vector3 rgb)
+        {
+            rgb = Vector3.Zero;
+
+            var p = new Vector2(x, y);
+            var AP = p - _a.ScreenPosition;
+            var vec = _barryCentricMatrixInverse * AP;
+            var u = vec.X;
+            var v = vec.Y;
+            bool drawPoint = (u >= 0 && v >= 0 && (u + v) < 1);
+
+            if (drawPoint)
+            {
                 var material = Vector3.Zero;
 
                 if (_options.Texture == null)
@@ -121,54 +141,57 @@ namespace Comgr.CourseProject.Lib
                 var interpolatedPosition = _a.HomogenousPosition + u * (_b.HomogenousPosition - _a.HomogenousPosition) + v * (_c.HomogenousPosition - _a.HomogenousPosition);
                 var position = interpolatedPosition.NormalizeByW();
 
-                for (int i = 0; i < lightSources.Length; i++)
+                if (position.Z == z)
                 {
-                    var lightSource = lightSources[i];
-
-                    var lVec = lightSource.Center - position;
-                    
-                    // Gibt dasselbe für lVec:
-                    // lVec = (new Vector4(lightSource.Center, w: 1) - interpolatedPosition).NormalizeByW();
-
-                    var lVecNorm = Vector3.Normalize(lVec);
-                    var nVecNorm = _currentSurfaceNormal;
-
-                    var light = Conversions.FromColor(lightSource.Color);
-
-                    // Diffuse Lambert
-                    var dot_diffuse = Vector3.Dot(nVecNorm, lVecNorm);
-
-                    if (_options.DiffuseLambert 
-                        && dot_diffuse > 0)
+                    for (int i = 0; i < lightSources.Length; i++)
                     {
-                        var diffuse = Vector3.Multiply(light, material) * dot_diffuse;
-                        color += diffuse;
+                        var lightSource = lightSources[i];
+
+                        var lVec = lightSource.Center - position;
+
+                        // Gibt dasselbe für lVec:
+                        // lVec = (new Vector4(lightSource.Center, w: 1) - interpolatedPosition).NormalizeByW();
+
+                        var lVecNorm = Vector3.Normalize(lVec);
+                        var nVecNorm = _currentSurfaceNormal;
+
+                        var light = Conversions.FromColor(lightSource.Color);
+
+                        // Diffuse Lambert
+                        var dot_diffuse = Vector3.Dot(nVecNorm, lVecNorm);
+
+                        if (_options.DiffuseLambert
+                            && dot_diffuse > 0)
+                        {
+                            var diffuse = Vector3.Multiply(light, material) * dot_diffuse;
+                            rgb += diffuse;
+                        }
+
+                        // Specular Phong
+                        var eye = new Vector3(0, 0, 0);
+                        var rayVecNorm = Vector3.Normalize(position - eye);
+
+                        // var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
+                        // var rVec = lVec - (2 * sVec);
+                        // var dot_phong = Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm);
+
+                        // Keine Ahnung weshalb bei Verwendung des "rVec" (siehe SceneA.cs, Zeile 358) es "komisch" aussieht.
+
+                        var dot_phong = Vector3.Dot(Vector3.Normalize(-lVec), rayVecNorm);
+
+                        if (_options.SpecularPhong
+                            && dot_phong > 0)
+                        {
+                            var specular = light * (float)Math.Pow(dot_phong, _options.SpecularPhongFactor);
+                            rgb += specular;
+                        }
                     }
-                    
-                    // Specular Phong
-                    var eye = new Vector3(0, 0, 0);
-                    var rayVecNorm = Vector3.Normalize(position - eye);
-                                        
-                    // var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
-                    // var rVec = lVec - (2 * sVec);
-                    // var dot_phong = Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm);
 
-                    // Keine Ahnung weshalb bei Verwendung des "rVec" (siehe SceneA.cs, Zeile 358) es "komisch" aussieht.
-
-                    var dot_phong = Vector3.Dot(Vector3.Normalize(-lVec), rayVecNorm);                                       
-
-                    if (_options.SpecularPhong 
-                        && dot_phong > 0)
-                    {
-                        var specular = light * (float)Math.Pow(dot_phong, _options.SpecularPhongFactor);
-                        color += specular;
-                    }
+                    return true;
                 }
-
-                return (color, position.Z);
             }
 
-            return (Vector3.Zero, float.PositiveInfinity);
+            return false;
         }
 
         private float Min(float f1, float f2, float f3)
