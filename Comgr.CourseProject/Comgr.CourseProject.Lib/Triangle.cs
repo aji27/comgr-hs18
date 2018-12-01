@@ -18,7 +18,9 @@ namespace Comgr.CourseProject.Lib
         private bool _isBackfacingOnScreen;
         private Matrix2x2 _barryCentricMatrixInverse;
 
-        public Triangle(Vertex a, Vertex b, Vertex c)
+        private TriangleTexture _texture;
+
+        public Triangle(Vertex a, Vertex b, Vertex c, TriangleTexture texture = null)
         {
             _a = a;
             _b = b;
@@ -28,8 +30,9 @@ namespace Comgr.CourseProject.Lib
             var ab = _b.HomogenousPosition.NormalizeByW() - _a.HomogenousPosition.NormalizeByW();
             var ac = _c.HomogenousPosition.NormalizeByW() - _a.HomogenousPosition.NormalizeByW();
             _startSurfaceNormal = -Vector3.Normalize(Vector3.Cross(ab, ac));
-
             _currentSurfaceNormal = _startSurfaceNormal;
+
+            _texture = texture;
 
             OnPropertyChanged();
         }
@@ -100,8 +103,18 @@ namespace Comgr.CourseProject.Lib
             {
                 var color = Vector3.Zero;
 
-                var interpolatedMaterial = _a.HomogenousColor + u * (_b.HomogenousColor - _a.HomogenousColor) + v * (_c.HomogenousColor - _a.HomogenousColor);
-                var material = interpolatedMaterial.NormalizeByW();
+                var material = Vector3.Zero;
+
+                if (_texture == null)
+                {
+                    var interpolatedMaterial = _a.HomogenousColor + u * (_b.HomogenousColor - _a.HomogenousColor) + v * (_c.HomogenousColor - _a.HomogenousColor);
+                    material = interpolatedMaterial.NormalizeByW();
+                }
+                else
+                {
+                    var interpolatedTexture = _a.TexturePosition + u * (_b.TexturePosition - _a.TexturePosition) + v * (_c.TexturePosition - _a.TexturePosition);
+                    material = _texture.CalcColor(interpolatedTexture.X, interpolatedTexture.Y);
+                }
 
                 var interpolatedPosition = _a.HomogenousPosition + u * (_b.HomogenousPosition - _a.HomogenousPosition) + v * (_c.HomogenousPosition - _a.HomogenousPosition);
                 var position = interpolatedPosition.NormalizeByW();

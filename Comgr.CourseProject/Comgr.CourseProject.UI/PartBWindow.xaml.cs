@@ -128,45 +128,42 @@ namespace Comgr.CourseProject.UI
 
             var points = new Vector3[]
             {
-                // top
                 new Vector3(-1, -1, -1),
                 new Vector3(+1, -1, -1),
                 new Vector3(+1, +1, -1),
-                new Vector3(-1, +1, -1),
-
-                //bottom                
+                new Vector3(-1, +1, -1),              
                 new Vector3(-1, -1, +1),
                 new Vector3(+1, -1, +1),
                 new Vector3(+1, +1, +1),
                 new Vector3(-1, +1, +1)
             };
 
-            var triangleIdx = new List<(int, int, int, int)>
+            var triangleIdx = new List<(int, int, int, int, int, int, int, int)>
             {
-                (0, 1, 2, 2), // top
-                (0, 2, 3, 2),
+                (0, 1, 2, 2, 0, 3, 1, 0), // top
+                (0, 2, 3, 2, 0, 0, 3, 2),
 
-                (7, 6, 5, 3), // bottom
-                (7, 5, 4, 3),
+                (7, 6, 5, 3, 0, 3, 1, 0), // bottom
+                (7, 5, 4, 3, 0, 0, 3, 2),
 
-                (0, 3, 7, 0), // left
-                (0, 7, 4, 0),
+                (0, 3, 7, 0, 0, 3, 1, 0), // left
+                (0, 7, 4, 0, 0, 0, 3, 2),
 
-                (2, 1, 5, 1), // right                
-                (2, 5, 6, 1),
+                (2, 1, 5, 1, 0, 3, 1, 0), // right                
+                (2, 5, 6, 1, 0, 0, 3, 2),
 
-                (3, 2, 6, 4), // front
-                (3, 6, 7, 4),
+                (3, 2, 6, 4, 0, 3, 1, 0), // front
+                (3, 6, 7, 4, 0, 0, 3, 2),
 
-                (1, 0, 4, 5), // back                
-                (1, 4, 5, 5)
+                (1, 0, 4, 5, 0, 3, 1, 0), // back                
+                (1, 4, 5, 5, 0, 0, 3, 2)
             };
 
             var colors = new Vector3[]
             {
                 new Vector3(1, 0, 0), // red
-                new Vector3(0, 1, 0), // green
-                new Vector3(0, 0, 1) // blue
+                //new Vector3(0, 1, 0), // green
+                //new Vector3(0, 0, 1) // blue
             };
 
             var normals = new Vector3[]
@@ -179,16 +176,49 @@ namespace Comgr.CourseProject.UI
                 Vector3.UnitZ
             };
 
+            var textures = new TriangleTexture[]
+            {
+                new TriangleTexture(@"Resources\TilePattern-n1_UR_1024.png")
+            };
+
+            var textureCoordinates = new Vector2[]
+            {
+                new Vector2(1024, 0),
+                new Vector2(1024, 1024),
+                new Vector2(0, 0),
+                new Vector2(0, 1024)
+            };
+
             var random = new Random();
 
             foreach (var t in triangleIdx)
             {
-                var v1 = new Vertex(points[t.Item1], colors[random.Next(0, colors.Length)], screenWidth, screenHeight);
-                var v2 = new Vertex(points[t.Item2], colors[random.Next(0, colors.Length)], screenWidth, screenHeight);
-                var v3 = new Vertex(points[t.Item3], colors[random.Next(0, colors.Length)], screenWidth, screenHeight);
                 var n = normals[t.Item4];
 
-                triangles.Add(new Triangle(v1, v2, v3));
+                TriangleTexture txt = null;
+
+                if (t.Item5 >= 0)
+                    txt = textures[t.Item5];
+
+                var t1 = Vector2.Zero;
+                if (txt != null)
+                    t1 = textureCoordinates[t.Item6];
+
+                var v1 = new Vertex(points[t.Item1], colors[random.Next(0, colors.Length)], screenWidth, screenHeight, t1);
+
+                var t2 = Vector2.Zero;
+                if (txt != null)
+                    t2 = textureCoordinates[t.Item7];
+
+                var v2 = new Vertex(points[t.Item2], colors[random.Next(0, colors.Length)], screenWidth, screenHeight, t2);
+
+                var t3 = Vector2.Zero;
+                if (txt != null)
+                    t3 = textureCoordinates[t.Item8];
+
+                var v3 = new Vertex(points[t.Item3], colors[random.Next(0, colors.Length)], screenWidth, screenHeight, t3);
+                
+                triangles.Add(new Triangle(v1, v2, v3, txt));
             }
 
             return triangles.ToArray();

@@ -21,17 +21,22 @@ namespace Comgr.CourseProject.Lib
         private Vector4 _homogenousColor;
         private Vector2 _screenPosition;
 
-        public Vertex(Vector3 position, Vector3 color, int screenWidth, int screenHeight)
-            : this(position, color, screenWidth, screenHeight, Matrix4x4.Identity)
+        private Vector2 _texturePosition;
+
+        public Vertex(Vector3 position, Vector3 color, int screenWidth, int screenHeight, Vector2 texturePosition)
+            : this(position, color, screenWidth, screenHeight, texturePosition, Matrix4x4.Identity)
         {
         }
 
-        public Vertex(Vector3 position, Vector3 color, int screenWidth, int screenHeight, Matrix4x4 transform)
+        public Vertex(Vector3 position, Vector3 color, int screenWidth, int screenHeight, Vector2 texturePosition, Matrix4x4 transform)
         {
             _position = position;
             _color = color;
             _screenWidth = screenWidth;
             _screenHeight = screenHeight;
+
+            _texturePosition = texturePosition;
+
             _startMatrix = transform;
             _currentMatrix = _startMatrix;
 
@@ -43,6 +48,8 @@ namespace Comgr.CourseProject.Lib
         public Vector4 HomogenousColor => _homogenousColor;
 
         public Vector2 ScreenPosition => _screenPosition;
+
+        public Vector2 TexturePosition => _texturePosition;
 
         private void OnPropertyChanged()
         {
