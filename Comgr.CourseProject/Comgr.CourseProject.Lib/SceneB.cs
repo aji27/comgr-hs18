@@ -42,11 +42,15 @@ namespace Comgr.CourseProject.Lib
 
         public ImageSource GetImage()
         {
+            //** clear buffers
+
             Array.Clear(_rgbArray, 0, _rgbArray.Length);
 
             for (int x = 0; x < _screenWidth; x++)
                 for (int y = 0; y < _screenHeight; y++)
                     _zBufferArray[x, y] = float.PositiveInfinity;
+
+            //** first pass (Z-Prepass)
 
             for (int i = 0; i < _triangles.Length; i++)
             {
@@ -70,6 +74,8 @@ namespace Comgr.CourseProject.Lib
                     }
                 }
             }
+
+            //** second pass
 
             for (int i = 0; i < _triangles.Length; i++)
             {
@@ -100,6 +106,8 @@ namespace Comgr.CourseProject.Lib
                     }
                 }
             }
+
+            //** buffer to image
 
             for (int x = 0; x < _screenWidth; x++)
             {
