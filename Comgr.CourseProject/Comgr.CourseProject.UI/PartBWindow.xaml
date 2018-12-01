@@ -20,7 +20,7 @@
             <TextBlock Text="DiffuseLambert" Margin="0,5,0,0"/>
             <TextBox x:Name="DiffuseLambert" Text="True" />
             <TextBlock Text="SpecularPhong" Margin="0,5,0,0"/>
-            <TextBox x:Name="SpecularPhong" Text="True" />
+            <TextBox x:Name="SpecularPhong" Text="False" />
             <TextBlock Text="SpecularPhongFactor" Margin="0,5,0,0"/>
             <TextBox x:Name="SpecularPhongFactor" Text="5000" />
             <TextBlock Text="Z-Buffer" Margin="0,5,0,0"/>
@@ -30,7 +30,7 @@
             <TextBlock Text="BilinearFilter" Margin="0,5,0,0"/>
             <TextBox x:Name="BilinearFilter" Text="False" />
             <TextBlock Text="GammaCorrect" Margin="0,5,0,0"/>
-            <TextBox x:Name="GammaCorrect" Text="True" />
+            <TextBox x:Name="GammaCorrect" Text="False" />
             <TextBlock x:Name="Status" Text="Status: Ready" Margin="0,15,0,0"  VerticalAlignment="Center" />
             <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
                 <Button x:Name="Start" Content="Start" Margin="0,0,5,0" />

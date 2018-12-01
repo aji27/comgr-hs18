@@ -21,7 +21,9 @@ namespace Comgr.CourseProject.UI
 
         private static readonly TriangleTexture[] _textures = new TriangleTexture[] 
         {
-            new TriangleTexture(@"Resources\TilePattern-n1_UR_1024.png")
+            new TriangleTexture(@"Resources\TilePattern-n1_UR_1024.png"),
+            new TriangleTexture(@"Resources\Tileable_Red_brick_texture_DIFFUSE.jpg"),
+            new TriangleTexture(@"Resources\brick_texture1884.jpg_.jpg")
         };
 
         public PartBWindow()
@@ -194,22 +196,22 @@ namespace Comgr.CourseProject.UI
             var triangleIdx = new List<(int, int, int, int, int, int, int)>
             {
                 (0, 1, 2, 2, 3, 1, 0), // top
-                (0, 2, 3, 2, 0, 3, 2),
+                (0, 2, 3, 2, 3, 0, 2),
 
                 (7, 6, 5, 3, 3, 1, 0), // bottom
-                (7, 5, 4, 3, 0, 3, 2),
+                (7, 5, 4, 3, 3, 0, 2),
 
                 (0, 3, 7, 0, 3, 1, 0), // left
-                (0, 7, 4, 0, 0, 3, 2),
+                (0, 7, 4, 0, 3, 0, 2),
 
                 (2, 1, 5, 1, 3, 1, 0), // right                
-                (2, 5, 6, 1, 0, 3, 2),
+                (2, 5, 6, 1, 3, 0, 2),
 
                 (3, 2, 6, 4, 3, 1, 0), // front
-                (3, 6, 7, 4, 0, 3, 2),
+                (3, 6, 7, 4, 3, 0, 2),
 
                 (1, 0, 4, 5, 3, 1, 0), // back                
-                (1, 4, 5, 5, 0, 3, 2)
+                (1, 4, 5, 5, 3, 0, 2)
             };
 
             var colors = new Vector3[]
