@@ -31,7 +31,7 @@
             <TextBox x:Name="BilinearFilter" Text="False" />
             <TextBlock Text="GammaCorrect" Margin="0,5,0,0"/>
             <TextBox x:Name="GammaCorrect" Text="True" />
-   
+            <TextBlock x:Name="Status" Text="Status: Ready" Margin="0,15,0,0"  VerticalAlignment="Center" />
             <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
                 <Button x:Name="Start" Content="Start" Margin="0,0,5,0" />
                 <Button x:Name="Cancel" Content="Cancel"/>

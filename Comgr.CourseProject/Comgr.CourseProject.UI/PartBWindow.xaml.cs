@@ -1,6 +1,7 @@
 ﻿using Comgr.CourseProject.Lib;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using System.Threading.Tasks;
 using System.Windows;
@@ -55,6 +56,7 @@ namespace Comgr.CourseProject.UI
             _isRunning = false;
             CompositionTarget.Rendering -= CompositionTarget_Rendering;
             SetControlsEnabled(true);
+            Status.Text = "Status: Ready";
         }
 
         private void Start_Click(object sender, RoutedEventArgs e)
@@ -114,6 +116,8 @@ namespace Comgr.CourseProject.UI
         {
             if (_isRunning)
             {
+                var sw = Stopwatch.StartNew();
+
                 rotationInDegrees += 10;
                 if (rotationInDegrees > 360)
                     rotationInDegrees = 0;
@@ -124,6 +128,10 @@ namespace Comgr.CourseProject.UI
                 _scene.ApplyTransform(transform);
 
                 Image.Source = _scene.GetImage();
+
+                sw.Stop();
+
+                Status.Text = $"Status: Running at {(1d / sw.Elapsed.TotalSeconds):F2} fps.";
             }
         }
 
