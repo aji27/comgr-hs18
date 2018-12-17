@@ -24,12 +24,12 @@ namespace Comgr.CourseProject.Lib
         {
         }
 
-        public Vector3 CalcColor(float s, float t, bool bilinearFiltering)
+        public Vector3 CalcColor(float s, float t, bool bilinearFiltering, bool gammaCorrection)
         {
             s = Clamp(0, _width - 1, s);
             t = Clamp(0, _height - 1, t);
 
-            Color color = Color.Black;
+            var rgb = Vector3.Zero;
 
             lock (_bitmap)
             {
@@ -52,30 +52,40 @@ namespace Comgr.CourseProject.Lib
                         var c_red = Lerp(c1, c2, t_lerp);
                         var c_green = Lerp(c3, c4, t_lerp);
 
-                        var rgb = Vector3.Lerp(c_red, c_green, s_lerp);
-
-                        return rgb;
+                        rgb = Vector3.Lerp(c_red, c_green, s_lerp);
                     }
                     else
                     {
                         // edge case
-                        color = _bitmap.GetPixel((int)s, (int)t);
+                        var color = _bitmap.GetPixel((int)s, (int)t);
+                        rgb = FromColor(color);
                     }
                 }
                 else
                 {
-                    color = _bitmap.GetPixel((int)s, (int)t);
+                    var color = _bitmap.GetPixel((int)s, (int)t);
+                    rgb = FromColor(color);
                 }
             }
-                        
-            return FromColor(color);
+
+            // Gamma correct (sRGB -> Linear RGB)
+            if (gammaCorrection)
+            {
+                rgb = new Vector3((float)Math.Pow(rgb.X, 2.2d), (float)Math.Pow(rgb.Y, 2.2d), (float)Math.Pow(rgb.Z, 2.2d));
+            }
+
+            return rgb;
         }
 
         private static Vector3 FromColor(Color c) => new Vector3(c.R / (float)byte.MaxValue, c.G / (float)byte.MaxValue, c.B / (float)byte.MaxValue);
 
-        private static float Clamp(float minValue, float maxValue, float value) => Math.Min(Math.Max(value, minValue), maxValue);
-
-        private static Vector3 Lerp(Color c1, Color c2, float amount) => Vector3.Lerp(FromColor(c1), FromColor(c2), amount);
-            
+        private static float Clamp(float minValue, float maxValue, float value)
+        {
+            if (value < minValue) return minValue;
+            else if (value > maxValue) return maxValue;
+            else return value;
+        }
+                
+        private static Vector3 Lerp(Color c1, Color c2, float amount) => Vector3.Lerp(FromColor(c1), FromColor(c2), amount);            
     }
 }

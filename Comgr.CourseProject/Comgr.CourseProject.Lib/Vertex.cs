@@ -20,6 +20,7 @@ namespace Comgr.CourseProject.Lib
         private Vector4 _homogenousPosition;
         private Vector4 _homogenousColor;
         private Vector2 _screenPosition;
+        private Vector3 _homogenousTexturePosition;
 
         private Vector2 _texturePosition;
 
@@ -49,13 +50,14 @@ namespace Comgr.CourseProject.Lib
 
         public Vector2 ScreenPosition => _screenPosition;
 
-        public Vector2 TexturePosition => _texturePosition;
+        public Vector3 HomogenousTexturePosition => _homogenousTexturePosition;
 
         private void OnPropertyChanged()
         {
             _homogenousPosition = GetHomogenousPosition();
             _homogenousColor = GetHomogenousColor();
             _screenPosition = GetScreenPosition();
+            _homogenousTexturePosition = GetHomogenousTexturePosition();
         }
 
         private Vector4 GetHomogenousPosition()
@@ -77,6 +79,11 @@ namespace Comgr.CourseProject.Lib
             var y = _screenWidth * homogenousPosition.Y / homogenousPosition.Z + _screenHeight / 2;
 
             return new Vector2(x, y);
+        }
+
+        private Vector3 GetHomogenousTexturePosition()
+        {
+            return new Vector3(_texturePosition / _homogenousPosition.W, 1f / _homogenousPosition.W);
         }
 
         public void ApplyTransform(Matrix4x4 transform)

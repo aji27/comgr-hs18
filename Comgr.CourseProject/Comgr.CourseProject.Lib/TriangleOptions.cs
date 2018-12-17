@@ -17,5 +17,7 @@ namespace Comgr.CourseProject.Lib
         public TriangleTexture Texture { get; set; }
 
         public bool BilinearFilter { get; set; }
+
+        public bool GammaCorrect { get; set; }
     }
 }

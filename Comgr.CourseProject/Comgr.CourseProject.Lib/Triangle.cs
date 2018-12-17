@@ -134,8 +134,9 @@ namespace Comgr.CourseProject.Lib
                 }
                 else
                 {
-                    var interpolatedTexture = _a.TexturePosition + u * (_b.TexturePosition - _a.TexturePosition) + v * (_c.TexturePosition - _a.TexturePosition);
-                    material = _options.Texture.CalcColor(interpolatedTexture.X, interpolatedTexture.Y, _options.BilinearFilter);
+                    var interpolatedTexture = _a.HomogenousTexturePosition + u * (_b.HomogenousTexturePosition - _a.HomogenousTexturePosition) + v * (_c.HomogenousTexturePosition - _a.HomogenousTexturePosition);
+                    var texturePosition = interpolatedTexture.NormalizeByW(); 
+                    material = _options.Texture.CalcColor(texturePosition.X, texturePosition.Y, _options.BilinearFilter, _options.GammaCorrect);
                 }
 
                 var interpolatedPosition = _a.HomogenousPosition + u * (_b.HomogenousPosition - _a.HomogenousPosition) + v * (_c.HomogenousPosition - _a.HomogenousPosition);
@@ -171,13 +172,14 @@ namespace Comgr.CourseProject.Lib
                         var eye = new Vector3(0, 0, 0);
                         var rayVecNorm = Vector3.Normalize(position - eye);
 
-                        // var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
-                        // var rVec = lVec - (2 * sVec);
-                        // var dot_phong = Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm);
+                        var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
+                        var rVec = lVec - (2 * sVec);
+                        var dot_phong = -Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm);
 
                         // Keine Ahnung weshalb bei Verwendung des "rVec" (siehe SceneA.cs, Zeile 358) es "komisch" aussieht.
 
-                        var dot_phong = Vector3.Dot(Vector3.Normalize(-lVec), rayVecNorm);
+                        // Bastellösung:
+                        //var dot_phong = Vector3.Dot(Vector3.Normalize(-lVec), rayVecNorm);
 
                         if (_options.SpecularPhong
                             && dot_phong > 0)

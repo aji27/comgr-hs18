@@ -16,5 +16,13 @@ namespace Comgr.CourseProject.Lib
             else
                 return new Vector3(v.X, v.Y, v.Z);
         }
+
+        public static Vector2 NormalizeByW(this Vector3 v)
+        {
+            if (v.Z != 1f && v.Z != 0f)
+                return new Vector2(v.X / v.Z, v.Y / v.Z);
+            else
+                return new Vector2(v.X, v.Y);
+        }
     }
 }

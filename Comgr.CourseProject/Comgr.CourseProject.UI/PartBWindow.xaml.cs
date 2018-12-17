@@ -84,7 +84,8 @@ namespace Comgr.CourseProject.UI
                     SpecularPhong = bool.Parse(SpecularPhong.Text),
                     SpecularPhongFactor = float.Parse(SpecularPhongFactor.Text),
                     Texture = textureIndex >= 0 ? _textures[textureIndex] : null,
-                    BilinearFilter = bool.Parse(BilinearFilter.Text)
+                    BilinearFilter = bool.Parse(BilinearFilter.Text),
+                    GammaCorrect = bool.Parse(GammaCorrect.Text)
                 };
 
                 var triangles = GetTriangles((int)_screenWidth, (int)_screenHeight, options);
