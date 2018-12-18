@@ -9,7 +9,7 @@ namespace Comgr.CourseProject.Lib
 {
     public static class RenderingExtensions
     {
-        public static Vector3 NormalizeByW(this Vector4 v)
+        public static Vector3 HomogenousNormalize(this Vector4 v)
         {
             if (v.W != 1f && v.W != 0f)
                 return new Vector3(v.X / v.W, v.Y / v.W, v.Z / v.W);
@@ -17,7 +17,7 @@ namespace Comgr.CourseProject.Lib
                 return new Vector3(v.X, v.Y, v.Z);
         }
 
-        public static Vector2 NormalizeByW(this Vector3 v)
+        public static Vector2 HomogenousNormalize(this Vector3 v)
         {
             if (v.Z != 1f && v.Z != 0f)
                 return new Vector2(v.X / v.Z, v.Y / v.Z);

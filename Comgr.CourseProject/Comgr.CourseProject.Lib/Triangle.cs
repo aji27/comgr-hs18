@@ -29,8 +29,8 @@ namespace Comgr.CourseProject.Lib
             _c = c;
 
             // Calculate Normal
-            var ab = _b.HomogenousPosition.NormalizeByW() - _a.HomogenousPosition.NormalizeByW();
-            var ac = _c.HomogenousPosition.NormalizeByW() - _a.HomogenousPosition.NormalizeByW();
+            var ab = _b.HomogenousPosition.HomogenousNormalize() - _a.HomogenousPosition.HomogenousNormalize();
+            var ac = _c.HomogenousPosition.HomogenousNormalize() - _a.HomogenousPosition.HomogenousNormalize();
             _startSurfaceNormal = -Vector3.Normalize(Vector3.Cross(ab, ac));
             _currentSurfaceNormal = _startSurfaceNormal;
 
@@ -104,7 +104,7 @@ namespace Comgr.CourseProject.Lib
             if (drawPoint)
             {
                 var interpolatedPosition = _a.HomogenousPosition + u * (_b.HomogenousPosition - _a.HomogenousPosition) + v * (_c.HomogenousPosition - _a.HomogenousPosition);
-                var position = interpolatedPosition.NormalizeByW();
+                var position = interpolatedPosition.HomogenousNormalize();
 
                 return position.Z;
             }
@@ -125,25 +125,25 @@ namespace Comgr.CourseProject.Lib
 
             if (drawPoint)
             {
-                var material = Vector3.Zero;
-
-                if (_options.Texture == null)
-                {
-                    var interpolatedMaterial = _a.HomogenousColor + u * (_b.HomogenousColor - _a.HomogenousColor) + v * (_c.HomogenousColor - _a.HomogenousColor);
-                    material = interpolatedMaterial.NormalizeByW();
-                }
-                else
-                {
-                    var interpolatedTexture = _a.HomogenousTexturePosition + u * (_b.HomogenousTexturePosition - _a.HomogenousTexturePosition) + v * (_c.HomogenousTexturePosition - _a.HomogenousTexturePosition);
-                    var texturePosition = interpolatedTexture.NormalizeByW(); 
-                    material = _options.Texture.CalcColor(texturePosition.X, texturePosition.Y, _options.BilinearFilter, _options.GammaCorrect);
-                }
-
                 var interpolatedPosition = _a.HomogenousPosition + u * (_b.HomogenousPosition - _a.HomogenousPosition) + v * (_c.HomogenousPosition - _a.HomogenousPosition);
-                var position = interpolatedPosition.NormalizeByW();
+                var position = interpolatedPosition.HomogenousNormalize();
 
                 if (position.Z == z)
                 {
+                    var material = Vector3.Zero;
+
+                    if (_options.Texture == null)
+                    {
+                        var interpolatedMaterial = _a.HomogenousColor + u * (_b.HomogenousColor - _a.HomogenousColor) + v * (_c.HomogenousColor - _a.HomogenousColor);
+                        material = interpolatedMaterial.HomogenousNormalize();
+                    }
+                    else
+                    {
+                        var interpolatedTexture = _a.HomogenousTexturePosition + u * (_b.HomogenousTexturePosition - _a.HomogenousTexturePosition) + v * (_c.HomogenousTexturePosition - _a.HomogenousTexturePosition);
+                        var texturePosition = interpolatedTexture.HomogenousNormalize();
+                        material = _options.Texture.CalcColor(texturePosition.X, texturePosition.Y, _options.BilinearFilter, _options.GammaCorrect);
+                    }
+
                     for (int i = 0; i < lightSources.Length; i++)
                     {
                         var lightSource = lightSources[i];

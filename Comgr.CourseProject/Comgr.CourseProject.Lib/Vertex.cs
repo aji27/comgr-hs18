@@ -74,7 +74,7 @@ namespace Comgr.CourseProject.Lib
 
         private Vector2 GetScreenPosition()
         {
-            var homogenousPosition = _homogenousPosition.NormalizeByW();
+            var homogenousPosition = _homogenousPosition.HomogenousNormalize();
             var x = _screenWidth * homogenousPosition.X / homogenousPosition.Z + _screenWidth / 2;
             var y = _screenWidth * homogenousPosition.Y / homogenousPosition.Z + _screenHeight / 2;
 
@@ -83,7 +83,8 @@ namespace Comgr.CourseProject.Lib
 
         private Vector3 GetHomogenousTexturePosition()
         {
-            return new Vector3(_texturePosition / _homogenousPosition.W, 1f / _homogenousPosition.W);
+            var homogenousPosition = _homogenousPosition.HomogenousNormalize();
+            return new Vector3(_texturePosition / homogenousPosition.Z, 1f / homogenousPosition.Z);
         }
 
         public void ApplyTransform(Matrix4x4 transform)
