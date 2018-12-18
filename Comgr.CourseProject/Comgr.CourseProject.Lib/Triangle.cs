@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 
 namespace Comgr.CourseProject.Lib
 {
-
-
     public class Triangle
     {
         private Vertex _a;
@@ -151,8 +149,8 @@ namespace Comgr.CourseProject.Lib
                         var lVec = lightSource.Center - position;
 
                         // Gibt dasselbe für lVec:
-                        // lVec = (new Vector4(lightSource.Center, w: 1) - interpolatedPosition).NormalizeByW();
-
+                        // lVec = (new Vector4(lightSource.Center, w: 1) - interpolatedPosition).HomogenousNormalize();
+                                                
                         var lVecNorm = Vector3.Normalize(lVec);
                         var nVecNorm = _currentSurfaceNormal;
 
@@ -175,11 +173,6 @@ namespace Comgr.CourseProject.Lib
                         var sVec = (lVec - ((Vector3.Dot(lVec, nVecNorm)) * nVecNorm));
                         var rVec = lVec - (2 * sVec);
                         var dot_phong = -Vector3.Dot(Vector3.Normalize(rVec), rayVecNorm);
-
-                        // Keine Ahnung weshalb bei Verwendung des "rVec" (siehe SceneA.cs, Zeile 358) es "komisch" aussieht.
-
-                        // Bastellösung:
-                        //var dot_phong = Vector3.Dot(Vector3.Normalize(-lVec), rayVecNorm);
 
                         if (_options.SpecularPhong
                             && dot_phong > 0)
