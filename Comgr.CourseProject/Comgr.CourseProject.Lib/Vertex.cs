@@ -24,6 +24,9 @@ namespace Comgr.CourseProject.Lib
 
         private Vector2 _texturePosition;
 
+        private Vector3 _startNormal;
+        private Vector3 _currentNormal;
+
         public Vertex(Vector3 position, Vector3 color, int screenWidth, int screenHeight, Vector2 texturePosition)
             : this(position, color, screenWidth, screenHeight, texturePosition, Matrix4x4.Identity)
         {
@@ -42,8 +45,8 @@ namespace Comgr.CourseProject.Lib
             _currentMatrix = _startMatrix;
 
             OnPropertyChanged();
-        }
-                        
+        }                       
+        
         public Vector4 HomogenousPosition => _homogenousPosition;
                 
         public Vector4 HomogenousColor => _homogenousColor;
@@ -51,6 +54,19 @@ namespace Comgr.CourseProject.Lib
         public Vector2 ScreenPosition => _screenPosition;
 
         public Vector3 HomogenousTexturePosition => _homogenousTexturePosition;
+
+        public Vector3 Normal
+        {
+            get
+            {
+                return _currentNormal;
+            }
+            set
+            {
+                _startNormal = value;
+                _currentNormal = Vector3.TransformNormal(_startNormal, _currentMatrix);
+            }
+        }
 
         private void OnPropertyChanged()
         {
@@ -90,6 +106,8 @@ namespace Comgr.CourseProject.Lib
         public void ApplyTransform(Matrix4x4 transform)
         {
             _currentMatrix = _startMatrix * transform;
+            _currentNormal = Vector3.TransformNormal(_startNormal, transform);
+
             OnPropertyChanged();
         }
     }

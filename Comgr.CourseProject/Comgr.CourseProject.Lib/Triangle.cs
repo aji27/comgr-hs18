@@ -32,6 +32,10 @@ namespace Comgr.CourseProject.Lib
             _startSurfaceNormal = -Vector3.Normalize(Vector3.Cross(ab, ac));
             _currentSurfaceNormal = _startSurfaceNormal;
 
+            _a.Normal = _currentSurfaceNormal;
+            _b.Normal = _currentSurfaceNormal;
+            _c.Normal = _currentSurfaceNormal;
+
             _options = options;
 
             OnPropertyChanged();
@@ -142,6 +146,8 @@ namespace Comgr.CourseProject.Lib
                         material = _options.Texture.CalcColor(texturePosition.X, texturePosition.Y, _options.BilinearFilter, _options.GammaCorrect);
                     }
 
+                    var interpolatedNormal = Vector3.Normalize(_a.Normal + u * (_b.Normal - _a.Normal) + v * (_c.Normal - _a.Normal));
+
                     for (int i = 0; i < lightSources.Length; i++)
                     {
                         var lightSource = lightSources[i];
@@ -152,7 +158,8 @@ namespace Comgr.CourseProject.Lib
                         // lVec = (new Vector4(lightSource.Center, w: 1) - interpolatedPosition).HomogenousNormalize();
                                                 
                         var lVecNorm = Vector3.Normalize(lVec);
-                        var nVecNorm = _currentSurfaceNormal;
+                        //var nVecNorm = _currentSurfaceNormal;
+                        var nVecNorm = interpolatedNormal;
 
                         var light = Conversions.FromColor(lightSource.Color);
 
