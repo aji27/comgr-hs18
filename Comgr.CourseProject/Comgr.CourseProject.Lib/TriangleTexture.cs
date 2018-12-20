@@ -24,6 +24,10 @@ namespace Comgr.CourseProject.Lib
         {
         }
 
+        public int Width => _width;
+
+        public int Height => _height;
+
         public Vector3 CalcColor(float s, float t, bool bilinearFiltering, bool gammaCorrection)
         {
             s = Clamp(0, _width - 1, s);

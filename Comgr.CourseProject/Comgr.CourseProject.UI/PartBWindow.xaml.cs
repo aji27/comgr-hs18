@@ -23,7 +23,8 @@ namespace Comgr.CourseProject.UI
         {
             new TriangleTexture(@"Resources\TilePattern-n1_UR_1024.png"),
             new TriangleTexture(@"Resources\Tileable_Red_brick_texture_DIFFUSE.jpg"),
-            new TriangleTexture(@"Resources\brick_texture1884.jpg_.jpg")
+            new TriangleTexture(@"Resources\brick_texture1884.jpg_.jpg"),
+            new TriangleTexture(@"Resources\mr-bean-64.png"),
         };
 
         public PartBWindow()
@@ -234,10 +235,10 @@ namespace Comgr.CourseProject.UI
 
             var textureCoordinates = new Vector2[]
             {
-                new Vector2(1024, 0),
-                new Vector2(1024, 1024),
+                new Vector2(1, 0),
+                new Vector2(1, 1),
                 new Vector2(0, 0),
-                new Vector2(0, 1024)
+                new Vector2(0, 1)
             };
 
             var random = new Random();
@@ -250,19 +251,28 @@ namespace Comgr.CourseProject.UI
 
                 var t1 = Vector2.Zero;
                 if (hasTexture)
+                {
                     t1 = textureCoordinates[t.Item5];
+                    t1 = new Vector2(t1.X * options.Texture.Width, t1.Y * options.Texture.Height);
+                }
 
                 var v1 = new Vertex(points[t.Item1], colors[random.Next(0, colors.Length)], screenWidth, screenHeight, t1);
 
                 var t2 = Vector2.Zero;
                 if (hasTexture)
+                {
                     t2 = textureCoordinates[t.Item6];
+                    t2 = new Vector2(t2.X * options.Texture.Width, t2.Y * options.Texture.Height);
+                }
 
                 var v2 = new Vertex(points[t.Item2], colors[random.Next(0, colors.Length)], screenWidth, screenHeight, t2);
 
                 var t3 = Vector2.Zero;
                 if (hasTexture)
+                {
                     t3 = textureCoordinates[t.Item7];
+                    t3 = new Vector2(t3.X * options.Texture.Width, t3.Y * options.Texture.Height);
+                }
 
                 var v3 = new Vertex(points[t.Item3], colors[random.Next(0, colors.Length)], screenWidth, screenHeight, t3);
                 
