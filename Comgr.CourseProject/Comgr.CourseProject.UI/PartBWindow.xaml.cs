@@ -81,6 +81,8 @@ namespace Comgr.CourseProject.UI
 
                 var options = new TriangleOptions()
                 {
+                    SingleColor = bool.Parse(SingleColor.Text),
+                    PerformBackfaceCulling = bool.Parse(PerformBackfaceCulling.Text),
                     DiffuseLambert = bool.Parse(DiffuseLambert.Text),
                     SpecularPhong = bool.Parse(SpecularPhong.Text),
                     SpecularPhongFactor = float.Parse(SpecularPhongFactor.Text),
@@ -95,7 +97,7 @@ namespace Comgr.CourseProject.UI
                     new LightSource("w", new Vector3(0.5f, 0.5f, -5), Colors.White)
                 };
 
-                _scene = new SceneB((int)_screenWidth, (int)_screenHeight, _pixelsPerInchX, _pixelsPerInchY, triangles, lightSources, bool.Parse(GammaCorrect.Text), bool.Parse(ZBuffer.Text));
+                _scene = new SceneB((int)_screenWidth, (int)_screenHeight, _pixelsPerInchX, _pixelsPerInchY, triangles, lightSources, bool.Parse(GammaCorrect.Text), bool.Parse(ZBuffer.Text), bool.Parse(DeferredRender.Text));
 
                 _isRunning = true;
                 CompositionTarget.Rendering += CompositionTarget_Rendering;

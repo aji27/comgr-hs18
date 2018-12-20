@@ -8,6 +8,10 @@ namespace Comgr.CourseProject.Lib
 {
     public class TriangleOptions
     {
+        public bool SingleColor { get; set; }
+
+        public bool PerformBackfaceCulling { get; set; }
+
         public bool DiffuseLambert { get; set; }
 
         public bool SpecularPhong { get; set; }

@@ -16,19 +16,24 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" Margin="0,0,15,0">
-
+            <TextBlock Text="SingleColor" Margin="0,5,0,0"/>
+            <TextBox x:Name="SingleColor" Text="True" />
+            <TextBlock Text="PerformBackfaceCulling" Margin="0,5,0,0"/>
+            <TextBox x:Name="PerformBackfaceCulling" Text="False" />
             <TextBlock Text="DiffuseLambert" Margin="0,5,0,0"/>
             <TextBox x:Name="DiffuseLambert" Text="True" />
             <TextBlock Text="SpecularPhong" Margin="0,5,0,0"/>
-            <TextBox x:Name="SpecularPhong" Text="True" />
+            <TextBox x:Name="SpecularPhong" Text="False" />
             <TextBlock Text="SpecularPhongFactor" Margin="0,5,0,0"/>
             <TextBox x:Name="SpecularPhongFactor" Text="200" />
             <TextBlock Text="Z-Buffer" Margin="0,5,0,0"/>
             <TextBox x:Name="ZBuffer" Text="False" />
             <TextBlock Text="TextureIndex (-1 = no, 0 ... 3)" Margin="0,5,0,0"/>
-            <TextBox x:Name="TextureIndex" Text="2" />
+            <TextBox x:Name="TextureIndex" Text="-1" />
             <TextBlock Text="BilinearFilter" Margin="0,5,0,0"/>
             <TextBox x:Name="BilinearFilter" Text="False" />
+            <TextBlock Text="DeferredRender" Margin="0,5,0,0"/>
+            <TextBox x:Name="DeferredRender" Text="False" />
             <TextBlock Text="GammaCorrect" Margin="0,5,0,0"/>
             <TextBox x:Name="GammaCorrect" Text="True" />
             <TextBlock x:Name="Status" Text="Status: Ready" Margin="0,15,0,0"  VerticalAlignment="Center" />

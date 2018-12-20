@@ -6,6 +6,9 @@ namespace Comgr.CourseProject.Lib
 {
     public class SceneB
     {
+        int ZBUFFER_VISUALIZE_MIN = 0;
+        int ZBUFFER_VISUALIZE_MAX = 10;
+
         private int _screenWidth;
         private int _screenHeight;
 
@@ -17,9 +20,11 @@ namespace Comgr.CourseProject.Lib
         private LightSource[] _lightSources;
 
         private bool _gammaCorrect;
-        private bool _zBuffer;
+        private bool _visualizeZBuffer;
 
-        public SceneB(int screenWidth, int screenHeight, double dpiX, double dpiY, Triangle[] triangles, LightSource[] lightSources, bool gammaCorrect, bool zBuffer)
+        private bool _useDeferredRenderer;
+
+        public SceneB(int screenWidth, int screenHeight, double dpiX, double dpiY, Triangle[] triangles, LightSource[] lightSources, bool gammaCorrect, bool visualizeZBuffer, bool useDeferredRenderer)
         {
             _screenWidth = screenWidth;
             _screenHeight = screenHeight;
@@ -31,7 +36,9 @@ namespace Comgr.CourseProject.Lib
             _lightSources = lightSources;
 
             _gammaCorrect = gammaCorrect;
-            _zBuffer = zBuffer;
+            _visualizeZBuffer = visualizeZBuffer;
+
+            _useDeferredRenderer = useDeferredRenderer;
         }
 
         public void ApplyTransform(Matrix4x4 matrix)
@@ -50,57 +57,98 @@ namespace Comgr.CourseProject.Lib
                 for (int y = 0; y < _screenHeight; y++)
                     _zBufferArray[x, y] = float.PositiveInfinity;
 
-            //** first pass (Z-Prepass)
-
-            for (int i = 0; i < _triangles.Length; i++)
+            if (_useDeferredRenderer)
             {
-                var triangle = _triangles[i];
+                //** first pass (Z-Prepass)
 
-                if (!triangle.IsBackfacing)
+                for (int i = 0; i < _triangles.Length; i++)
                 {
-                    for (int x = (int)Math.Min(0, Math.Max(triangle.MinScreenX, 0)); x < (int)Math.Min(Math.Max(triangle.MaxScreenX, 0), _screenWidth); x++)
-                    {
-                        for (int y = (int)Math.Min(0, Math.Max(triangle.MinScreenY, 0)); y < (int)Math.Min(Math.Max(triangle.MaxScreenY, 0), _screenHeight); y++)
-                        {
-                            var z = triangle.CalcZ(x, y);
+                    var triangle = _triangles[i];
 
-                            if (!float.IsInfinity(z)
-                                && !float.IsNaN(z)
-                                && z < _zBufferArray[x, y])
+                    if (!triangle.IsBackfacing)
+                    {
+                        for (int x = (int)Math.Min(0, Math.Max(triangle.MinScreenX, 0)); x < (int)Math.Min(Math.Max(triangle.MaxScreenX, 0), _screenWidth); x++)
+                        {
+                            for (int y = (int)Math.Min(0, Math.Max(triangle.MinScreenY, 0)); y < (int)Math.Min(Math.Max(triangle.MaxScreenY, 0), _screenHeight); y++)
                             {
-                                _zBufferArray[x, y] = z;
+                                var z = triangle.CalcZ(x, y);
+
+                                if (!float.IsInfinity(z)
+                                    && !float.IsNaN(z)
+                                    && z < _zBufferArray[x, y])
+                                {
+                                    _zBufferArray[x, y] = z;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                //** second pass
+
+                for (int i = 0; i < _triangles.Length; i++)
+                {
+                    var triangle = _triangles[i];
+
+                    if (!triangle.IsBackfacing)
+                    {
+                        for (int x = (int)Math.Min(0, Math.Max(triangle.MinScreenX, 0)); x < (int)Math.Min(Math.Max(triangle.MaxScreenX, 0), _screenWidth); x++)
+                        {
+                            for (int y = (int)Math.Min(0, Math.Max(triangle.MinScreenY, 0)); y < (int)Math.Min(Math.Max(triangle.MaxScreenY, 0), _screenHeight); y++)
+                            {
+                                float z = _zBufferArray[x, y];
+
+                                if (_visualizeZBuffer)
+                                {
+                                    var zcolor = (int)((z - ZBUFFER_VISUALIZE_MIN) / (ZBUFFER_VISUALIZE_MAX - ZBUFFER_VISUALIZE_MIN) * 255) * new Vector3(1f / 255, 1f / 255, 1f / 255);
+                                    _rgbArray[x, y] = zcolor;
+                                }
+                                else
+                                {
+                                    var rgb = Vector3.Zero;
+                                    if (triangle.CalcColorDeferred(x, y, _lightSources, z, out rgb))
+                                        _rgbArray[x, y] = rgb;
+                                }
                             }
                         }
                     }
                 }
             }
-
-            //** second pass
-
-            for (int i = 0; i < _triangles.Length; i++)
+            else
             {
-                var triangle = _triangles[i];
-
-                if (!triangle.IsBackfacing)
+                for (int i = 0; i < _triangles.Length; i++)
                 {
-                    for (int x = (int)Math.Min(0, Math.Max(triangle.MinScreenX, 0)); x < (int)Math.Min(Math.Max(triangle.MaxScreenX, 0), _screenWidth); x++)
-                    {
-                        for (int y = (int)Math.Min(0, Math.Max(triangle.MinScreenY, 0)); y < (int)Math.Min(Math.Max(triangle.MaxScreenY, 0), _screenHeight); y++)
-                        {
-                            float z = _zBufferArray[x, y];
+                    var triangle = _triangles[i];
 
-                            if (_zBuffer)
+                    if (!triangle.IsBackfacing)
+                    {
+                        for (int x = (int)Math.Min(0, Math.Max(triangle.MinScreenX, 0)); x < (int)Math.Min(Math.Max(triangle.MaxScreenX, 0), _screenWidth); x++)
+                        {
+                            for (int y = (int)Math.Min(0, Math.Max(triangle.MinScreenY, 0)); y < (int)Math.Min(Math.Max(triangle.MaxScreenY, 0), _screenHeight); y++)
                             {
-                                int Z_MIN = 0;
-                                int Z_MAX = 10;
-                                var zcolor = (int)((z - Z_MIN) / (Z_MAX - Z_MIN) * 255) * new Vector3(1f / 255, 1f / 255, 1f / 255);
-                                _rgbArray[x, y] = zcolor;
-                            }
-                            else
-                            {
-                                var rgb = Vector3.Zero;
-                                if (triangle.CalcColor(x, y, _lightSources, z, out rgb))
-                                    _rgbArray[x, y] = rgb;
+                                float z;
+                                Vector3 rgb;
+
+                                if (triangle.CalcColor(x, y, _lightSources, out z, out rgb)
+                                    && !float.IsInfinity(z)
+                                    && !float.IsNaN(z))
+                                {
+
+                                    if (z < _zBufferArray[x, y])
+                                    {
+                                        _zBufferArray[x, y] = z;
+
+                                        if (_visualizeZBuffer)
+                                        {
+                                            var zcolor = (int)((z - ZBUFFER_VISUALIZE_MIN) / (ZBUFFER_VISUALIZE_MAX - ZBUFFER_VISUALIZE_MIN) * 255) * new Vector3(1f / 255, 1f / 255, 1f / 255);
+                                            _rgbArray[x, y] = zcolor;
+                                        }
+                                        else
+                                        {
+                                            _rgbArray[x, y] = rgb;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
